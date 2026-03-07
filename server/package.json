@@ -4,7 +4,11 @@
   "type": "module",
   "private": true,
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "tsx": "^4.21.0"
+  },
+  "scripts": {
+    "dev": "tsx watch index.ts"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -14,6 +18,7 @@
     "@langchain/core": "^1.1.31",
     "@langchain/langgraph": "^1.2.1",
     "@langchain/openai": "^1.2.12",
+    "@types/express": "^5.0.6",
     "bcryptjs": "^3.0.3",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
