@@ -6,7 +6,9 @@ export const registerUser = async (req: Request, res: Response) => {
     try {
         const { name, email, password, username } = req.body;
         await connectDB();
-        const existingUser = await User.findOne({ email, username });
+        const existingUser = await User.findOne({
+            $or: [{ email }, { username }]
+        });
         if (existingUser) {
             return res.status(400).json({ message: "User already exists" });
         }
@@ -30,7 +32,9 @@ export const loginUser = async (req: Request, res: Response) => {
     try {
         const { email, password, username } = req.body;
         await connectDB();
-        const user = await User.findOne({ email, username }).select("+password");
+        const user = await User.findOne({
+            $or: [{ email }, { username: email }]
+        }).select("+password");
         if (!user) {
             return res.status(404).json({ message: "Invalid Email or Password" });
         }
