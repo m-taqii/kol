@@ -156,7 +156,10 @@ kol/
 │       ├── page.tsx            # Landing page
 │       ├── login/page.tsx      # Sign in screen
 │       ├── signup/page.tsx     # Account creation screen
-│       └── me/page.tsx         # Dashboard — rooms, chat, board panel
+│       └── me/                 # Authenticated dashboard app
+│           ├── layout.tsx      # Global sidebar navigation
+│           ├── page.tsx        # Dashboard home (rooms list)
+│           └── room/[id]/      # Single room chat interface
 │
 ├── server/                     # Express backend
 │   ├── server.ts               # Entry point
@@ -188,8 +191,9 @@ kol/
 
 **🖥️ Frontend**
 - Dark-themed auth flow — login and signup screens with username validation
-- Dashboard prototype (`/me`) — three-panel layout with room sidebar, message feed, and board member panel
-- Mock conversation demonstrating the AI board interaction pattern
+- Dashboard app (`/me`) — multi-page layout with a global sidebar and subpages for Rooms, Friends, and Settings
+- Room interface (`/me/room/[id]`) — dedicated chat view with AI board roster and mock message feed
+- Mock data layer demonstrating room state and the AI board interaction pattern
 - Responsive chat input with `@mention` placeholder support
 
 **⚡ Backend**
@@ -224,9 +228,9 @@ kol/
 - [ ] Consecutive message limiting enforcement at runtime
 
 ### Phase 3 — Rooms & Real-time `🔵 Planned`
+- [x] Room list and chat interface UI layout
 - [ ] Room CRUD — create, join, configure model roster
 - [ ] Socket.io integration for real-time messaging
-- [ ] Room sidebar with unread counts (UI prototype exists)
 - [ ] Board member panel per room
 
 ### Phase 4 — Memory `🔵 Planned`
