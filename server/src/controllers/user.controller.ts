@@ -1,9 +1,15 @@
 import type { Request, Response } from "express";
 import User from "../models/user.model";
 import jwt from "jsonwebtoken";
+import { connectDB } from "../lib/db";
 export const registerUser = async (req: Request, res: Response) => {
     try {
         const { name, email, password, username } = req.body;
+        await connectDB();
+        const existingUser = await User.findOne({ email, username });
+        if (existingUser) {
+            return res.status(400).json({ message: "User already exists" });
+        }
         const user = await User.create({ name, email, password, username });
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "fallback_secret", {
             expiresIn: "7d",
@@ -23,13 +29,14 @@ export const registerUser = async (req: Request, res: Response) => {
 export const loginUser = async (req: Request, res: Response) => {
     try {
         const { email, password, username } = req.body;
+        await connectDB();
         const user = await User.findOne({ email, username }).select("+password");
         if (!user) {
-            return res.status(404).json({ message: "User not found" });
+            return res.status(404).json({ message: "Invalid Email or Password" });
         }
         const isPasswordValid = await user.comparePassword(password);
         if (!isPasswordValid) {
-            return res.status(401).json({ message: "Invalid password" });
+            return res.status(401).json({ message: "Invalid Email or Password" });
         }
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "fallback_secret", {
             expiresIn: "7d",
