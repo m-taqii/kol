@@ -19,6 +19,8 @@ const page = () => {
         axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/login`, {
             email: formData.email,
             password: formData.password,
+        }, {
+            withCredentials: true,
         }).then((res) => {
             console.log(res.data);
             setSuccess("Login successful");
@@ -33,7 +35,7 @@ const page = () => {
     return (
         <div className='min-h-screen w-full bg-[#0a0a0a] flex flex-col items-center justify-center p-4 font-sans selection:bg-white/10'>
             <div className='mb-8'>
-                <h1 className='text-[22px] font-bold text-white tracking-wide'>Kōl</h1>
+                <Link href={"/"}><h1 className='text-[22px] font-bold text-white tracking-wide'>Kōl</h1></Link>
             </div>
 
             <div className='w-full max-w-[400px] bg-[#111111] p-8 rounded-[20px] border border-white/5 shadow-2xl'>
@@ -51,6 +53,7 @@ const page = () => {
                             placeholder='you@example.com'
                             value={formData.email}
                             onChange={(e) => setformData({ ...formData, email: e.target.value })}
+                            required
                         />
                     </div>
 
@@ -64,6 +67,7 @@ const page = () => {
                             placeholder='••••••••'
                             value={formData.password}
                             onChange={(e) => setformData({ ...formData, password: e.target.value })}
+                            required
                         />
                         <Link href="/forgot-password" className='text-[12px] text-[#e2a868] hover:text-[#f3b979] transition-colors'>Forgot password?</Link>
                     </div>

@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Settings, Layers, Users, LogOut, Hash } from "lucide-react";
+import { useState } from "react";
 import { CURRENT_USER, ROOMS } from "../app/me/data/mock";
+import CreateRoomModal from "./CreateRoomModal";
 
 const NAV_ITEMS = [
     { href: "/me", label: "Rooms", icon: Layers },
@@ -13,6 +15,7 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
     const pathname = usePathname();
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
     return (
         <aside className="w-[260px] shrink-0 h-screen overflow-y-auto no-scrollbar bg-[#111111] border-r border-[#1a1a1a] flex flex-col">
@@ -29,12 +32,12 @@ export default function Sidebar() {
                         <p className="text-[#4a4a4a] text-[11px]">@{CURRENT_USER.username}</p>
                     </div>
                 </div>
-                <Link
-                    href="/me"
-                    className="block w-full bg-[#ededed] text-[#0c0c0c] font-semibold text-[13px] py-2 rounded-lg text-center"
+                <button
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="block w-full bg-[#ededed] text-[#0c0c0c] font-semibold text-[13px] py-2 rounded-lg text-center hover:bg-white transition-colors"
                 >
                     + New Room
-                </Link>
+                </button>
             </div>
 
             {/* Divider */}
@@ -118,6 +121,11 @@ export default function Sidebar() {
                     Log out
                 </button>
             </div>
+
+            <CreateRoomModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+            />
         </aside>
     );
 }

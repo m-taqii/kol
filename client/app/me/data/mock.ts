@@ -72,9 +72,9 @@ export const ROOMS: Room[] = [
             { id: "u4", name: "Lisa Park" },
         ],
         aiModels: [
-            { id: "m1", name: "Gemini 2.0 Flash", role: "The Analyst", color: "#4285F4" },
-            { id: "m2", name: "Claude Haiku", role: "The Synthesizer", color: "#D97706" },
-            { id: "m3", name: "GPT-4o", role: "The Strategist", color: "#10B981" },
+            { id: "kimi", name: "Kimi-k2", role: "The Analyst", color: "#4285F4" },
+            { id: "qwen", name: "Qwen 3", role: "The Synthesizer", color: "#D97706" },
+            { id: "gpt", name: "GPT-4o", role: "The Strategist", color: "#10B981" },
         ],
         lastActive: "2 min ago",
         messageCount: 142,
@@ -90,8 +90,8 @@ export const ROOMS: Room[] = [
             { id: "u5", name: "Emma Wilson" },
         ],
         aiModels: [
-            { id: "m1", name: "Gemini 2.0 Flash", role: "The Analyst", color: "#4285F4" },
-            { id: "m4", name: "Llama 4 Scout", role: "The Creative", color: "#8B5CF6" },
+            { id: "kimi", name: "Kimi-k2", role: "The Analyst", color: "#4285F4" },
+            { id: "llama", name: "Llama 3.3", role: "The Creative", color: "#8B5CF6" },
         ],
         lastActive: "1 hour ago",
         messageCount: 56,
@@ -110,7 +110,7 @@ export const ROOMS: Room[] = [
             { id: "u8", name: "Tom Baker" },
         ],
         aiModels: [
-            { id: "m5", name: "Grok", role: "The Skeptic", color: "#EF4444" },
+            { id: "longcat", name: "LongCat", role: "The Skeptic", color: "#EF4444" },
         ],
         lastActive: "3 hours ago",
         messageCount: 89,
@@ -126,9 +126,9 @@ export const ROOMS: Room[] = [
             { id: "u3", name: "Mike Chen" },
         ],
         aiModels: [
-            { id: "m3", name: "GPT-4o", role: "The Strategist", color: "#10B981" },
-            { id: "m2", name: "Claude Haiku", role: "The Synthesizer", color: "#D97706" },
-            { id: "m4", name: "Llama 4 Scout", role: "The Creative", color: "#8B5CF6" },
+            { id: "gpt", name: "GPT-4o", role: "The Strategist", color: "#10B981" },
+            { id: "qwen", name: "Qwen 3", role: "The Synthesizer", color: "#D97706" },
+            { id: "llama", name: "Llama 3.3", role: "The Creative", color: "#8B5CF6" },
         ],
         lastActive: "1 day ago",
         messageCount: 234,
@@ -145,7 +145,7 @@ export const ROOMS: Room[] = [
             { id: "u6", name: "David Kim" },
         ],
         aiModels: [
-            { id: "m1", name: "Gemini 2.0 Flash", role: "The Analyst", color: "#4285F4" },
+            { id: "kimi", name: "Kimi-k2", role: "The Analyst", color: "#4285F4" },
         ],
         lastActive: "2 days ago",
         messageCount: 31,
@@ -161,10 +161,10 @@ export const ROOMS: Room[] = [
             { id: "u7", name: "Priya Sharma" },
         ],
         aiModels: [
-            { id: "m1", name: "Gemini 2.0 Flash", role: "The Analyst", color: "#4285F4" },
-            { id: "m3", name: "GPT-4o", role: "The Strategist", color: "#10B981" },
-            { id: "m5", name: "Grok", role: "The Skeptic", color: "#EF4444" },
-            { id: "m2", name: "Claude Haiku", role: "The Synthesizer", color: "#D97706" },
+            { id: "kimi", name: "Kimi-k2", role: "The Analyst", color: "#4285F4" },
+            { id: "gpt", name: "GPT-4o", role: "The Strategist", color: "#10B981" },
+            { id: "longcat", name: "LongCat", role: "The Skeptic", color: "#EF4444" },
+            { id: "qwen", name: "Qwen 3", role: "The Synthesizer", color: "#D97706" },
         ],
         lastActive: "3 days ago",
         messageCount: 78,
@@ -180,6 +180,14 @@ export const FRIENDS: Friend[] = [
     { id: "u5", name: "Emma Wilson", username: "emmaw", online: false },
     { id: "u6", name: "David Kim", username: "davidk", online: false },
     { id: "u7", name: "Priya Sharma", username: "priya_s", online: true },
+];
+
+export const AI_MODELS: AiModel[] = [
+    { id: "gpt", name: "GPT-4o", role: "The Strategist", color: "#10B981" },
+    { id: "llama", name: "Llama 3.3", role: "The Creative", color: "#8B5CF6" },
+    { id: "kimi", name: "Kimi-k2", role: "The Analyst", color: "#4285F4" },
+    { id: "qwen", name: "Qwen 3", role: "The Synthesizer", color: "#D97706" },
+    { id: "longcat", name: "LongCat", role: "The Skeptic", color: "#EF4444" },
 ];
 
 export const FRIEND_REQUESTS: FriendRequest[] = [
@@ -199,20 +207,20 @@ export const ROOM_MESSAGES: Record<string, ChatMessage[]> = {
         { id: "m1", user: "Alex Johnson", type: "human", time: "10:24 AM", content: "What should our go-to-market strategy be for Kōl targeting small developer teams?" },
         { id: "m2", user: "GPT-4o", type: "ai", role: "The Strategist", color: "#10B981", time: "10:25 AM", content: "For small dev teams, friction is the enemy. Focus on a zero-config onboarding experience. Emphasize that Kōl is a low-latency \"thinking room\" rather than another bloated tool. Offer a generous free tier based on Groq to capture organic growth." },
         { id: "m3", user: "Sarah Connor", type: "human", time: "10:30 AM", content: "Should we prioritize the CLI tool or the web dashboard first?" },
-        { id: "m4", user: "Claude Haiku", type: "ai", role: "The Synthesizer", color: "#D97706", time: "10:31 AM", content: "The web dashboard is essential for the multi-agent visual experience, but a CLI tool captures developers where they live. Build the dashboard for the \"aha\" moment, but follow fast with a CLI for daily retention." },
-        { id: "m5", user: "Gemini 2.0 Flash", type: "ai", role: "The Analyst", color: "#4285F4", time: "10:32 AM", content: "Data point: 73% of developer tools that gained traction in 2024 offered a CLI-first experience. The web interface drove conversion but the CLI drove daily active usage. I recommend a parallel build with CLI as the primary interface." },
+        { id: "m4", user: "Qwen 3", type: "ai", role: "The Synthesizer", color: "#D97706", time: "10:31 AM", content: "The web dashboard is essential for the multi-agent visual experience, but a CLI tool captures developers where they live. Build the dashboard for the \"aha\" moment, but follow fast with a CLI for daily retention." },
+        { id: "m5", user: "Kimi-k2", type: "ai", role: "The Analyst", color: "#4285F4", time: "10:32 AM", content: "Data point: 73% of developer tools that gained traction in 2024 offered a CLI-first experience. The web interface drove conversion but the CLI drove daily active usage. I recommend a parallel build with CLI as the primary interface." },
         { id: "m6", user: "Mike Chen", type: "human", time: "10:35 AM", content: "That data is interesting. What about pricing? Do we go freemium or credit-based from day one?" },
         { id: "m7", user: "GPT-4o", type: "ai", role: "The Strategist", color: "#10B981", time: "10:36 AM", content: "Credit-based from day one with a generous free tier (50 credits/day). This creates natural scarcity without a hard paywall. Users who hit the ceiling are already engaged enough to convert." },
     ],
     "2": [
         { id: "m1", user: "Emma Wilson", type: "human", time: "9:15 AM", content: "I updated the mockups for the room creation flow. Thoughts?" },
         { id: "m2", user: "Alex Johnson", type: "human", time: "9:20 AM", content: "Looks clean! I think the model selector could be more visual though." },
-        { id: "m3", user: "Llama 4 Scout", type: "ai", role: "The Creative", color: "#8B5CF6", time: "9:22 AM", content: "What if each AI model had a signature color that pulses subtly when it's \"thinking\"? Visual personality before they even speak." },
+        { id: "m3", user: "Llama 3.3", type: "ai", role: "The Creative", color: "#8B5CF6", time: "9:22 AM", content: "What if each AI model had a signature color that pulses subtly when it's \"thinking\"? Visual personality before they even speak." },
     ],
     "3": [
         { id: "m1", user: "David Kim", type: "human", time: "2:00 PM", content: "Anyone free Saturday? Thinking we could do a board game night." },
         { id: "m2", user: "Sarah Connor", type: "human", time: "2:05 PM", content: "I'm in! What time?" },
-        { id: "m3", user: "Grok", type: "ai", role: "The Skeptic", color: "#EF4444", time: "2:06 PM", content: "Statistically, Saturday plans made on a Monday have a 40% chance of actually happening. Just saying." },
-        { id: "m4", user: "Priya Sharma", type: "human", time: "2:10 PM", content: "Haha Grok keeping it real. I'm free after 5pm!" },
+        { id: "m3", user: "LongCat", type: "ai", role: "The Skeptic", color: "#EF4444", time: "2:06 PM", content: "Statistically, Saturday plans made on a Monday have a 40% chance of actually happening. Just saying." },
+        { id: "m4", user: "Priya Sharma", type: "human", time: "2:10 PM", content: "Haha LongCat keeping it real. I'm free after 5pm!" },
     ],
 };

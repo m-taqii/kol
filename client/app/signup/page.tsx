@@ -24,6 +24,8 @@ const page = () => {
             email: formData.email,
             username: formData.username,
             password: formData.password,
+        }, {
+            withCredentials: true,
         }).then((res) => {
             console.log(res.data);
             setSuccess("Registration successful");
@@ -39,7 +41,7 @@ const page = () => {
         <div className='min-h-screen w-full bg-[#0a0a0a] flex flex-col items-center justify-center p-4 font-sans selection:bg-white/10'>
 
             <div className='mb-8'>
-                <h1 className='text-[22px] font-bold text-white tracking-wide'>Kōl</h1>
+                <Link href={"/"}><h1 className='text-[22px] font-bold text-white tracking-wide'>Kōl</h1></Link>
             </div>
 
             <div className='w-full max-w-[400px] bg-[#111111] p-8 rounded-[20px] border border-white/5 shadow-2xl'>
@@ -57,6 +59,7 @@ const page = () => {
                             placeholder='Alex Johnson'
                             value={formData.name}
                             onChange={(e) => setformData({ ...formData, name: e.target.value })}
+                            required
                         />
                     </div>
 
@@ -68,6 +71,7 @@ const page = () => {
                             placeholder='alex_j'
                             value={formData.username}
                             onChange={(e) => setformData({ ...formData, username: e.target.value })}
+                            required
                         />
                     </div>
 
@@ -79,6 +83,7 @@ const page = () => {
                             placeholder='you@example.com'
                             value={formData.email}
                             onChange={(e) => setformData({ ...formData, email: e.target.value })}
+                            required
                         />
                     </div>
 
@@ -90,6 +95,7 @@ const page = () => {
                             placeholder='••••••••'
                             value={formData.password}
                             onChange={(e) => setformData({ ...formData, password: e.target.value })}
+                            required
                         />
                         <p className='text-[12px] text-[#555555] mt-0.5'>Minimum 8 characters</p>
                     </div>

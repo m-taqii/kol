@@ -1,5 +1,6 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { SystemMessage, HumanMessage } from "langchain";
+
 const summarizerAgent = new ChatOpenAI({
     model: "llama-3.1-8b-instant",
     apiKey: process.env.GROQ_API_KEY,
@@ -31,9 +32,9 @@ This summary will be silently injected as context into future AI responses. It m
 async function summarizerNode(state: any) {
     const response = await summarizerAgent.invoke([
         new SystemMessage(SUMMARIZER_SYSTEM_PROMPT),
-        new HumanMessage(state.prompt),
+        new HumanMessage(state.messages),
     ]);
-    return { response: response.content as string };
+    return { context: response.content as string };
 }
 
 export default summarizerNode;

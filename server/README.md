@@ -28,9 +28,16 @@ server/
     │       ├── models.ts # Multi-model proxy execution
     │       └── summarizer.ts # Continuous memory compression
     ├── controllers/      # API Controllers (REST layer)
+    │   ├── user.controller.ts
+    │   └── room.controller.ts
     ├── lib/              # Core utilities (e.g., db.ts)
-    ├── models/           # Mongoose schemas (e.g., User)
+    ├── middlewares/      # Express middlewares (e.g., auth.middleware.ts)
+    ├── models/           # Mongoose schemas
+    │   ├── user.model.ts
+    │   └── room.model.ts
     └── routes/           # Express router definitions
+        ├── user.route.ts
+        └── room.route.ts
 ```
 
 ---
@@ -134,6 +141,47 @@ A `token` httpOnly cookie is also set automatically (7-day expiry).
 **Error Responses:**
 - `404 Not Found` / `401 Unauthorized`: "Invalid Email or Password" — generic message to prevent user enumeration
 - `500 Server Error`: Internal database or processing error
+
+---
+
+## 🏠 Room API
+
+Endpoints for creating and managing chat rooms. All endpoints require a valid JWT token.
+
+### `POST /room/create`
+
+Creates a new chat room and adds the specified members and AI models.
+
+**Request Body:**
+```json
+{
+  "name": "Project Strategy",
+  "members": ["alex_j", "sarah_c"],
+  "aiMembers": ["gpt", "kimi"]
+}
+```
+
+**Success Response (201 Created):**
+```json
+{
+  "name": "Project Strategy",
+  "owner": "60d5ecb8b392cb3e4c8b4567",
+  "members": [
+    "60d5ecb8b392cb3e4c8b4567",
+    "60d5ecb8b392cb3e4c8b4568"
+  ],
+  "aiMembers": ["gpt", "kimi"],
+  "memory": "",
+  "messageCount": 0,
+  "_id": "60d5ecb8b392cb3e4c8b4569",
+  "createdAt": "2026-03-15T12:00:00.000Z",
+  "updatedAt": "2026-03-15T12:00:00.000Z"
+}
+```
+
+**Error Responses:**
+- `401 Unauthorized`: Missing or invalid token
+- `500 Server Error`: Failed to create room
 
 ---
 

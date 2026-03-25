@@ -26,7 +26,6 @@ export default function DashboardPage() {
                 <StatsRow
                     totalRooms={ROOMS.length}
                     messagesSent={630}
-                    creditsLeft={12}
                     friends={FRIENDS.length}
                 />
             </div>

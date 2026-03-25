@@ -3,25 +3,22 @@ import { Layers, MessageSquare, Zap, Users } from "lucide-react";
 interface StatsRowProps {
     totalRooms: number;
     messagesSent: number;
-    creditsLeft: number;
     friends: number;
 }
 
 export default function StatsRow({
     totalRooms,
     messagesSent,
-    creditsLeft,
     friends,
 }: StatsRowProps) {
     const cards = [
         { label: "Total Rooms", value: totalRooms, icon: Layers, accent: false },
         { label: "Messages Sent", value: messagesSent, icon: MessageSquare, accent: false },
-        { label: "Credits Left", value: creditsLeft, icon: Zap, accent: creditsLeft < 20 },
         { label: "Friends", value: friends, icon: Users, accent: false },
     ];
 
     return (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {cards.map((card) => (
                 <div
                     key={card.label}

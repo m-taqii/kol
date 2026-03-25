@@ -67,7 +67,6 @@ export default function RoomPage({ params }: RoomPageProps) {
                             style={{ backgroundColor: model.color }}
                         />
                         <span className="text-[12px] text-[#5a5a5a]">{model.name}</span>
-                        <span className="text-[10px] text-[#3a3a3a]">· {model.role}</span>
                     </div>
                 ))}
             </div>
@@ -99,17 +98,6 @@ export default function RoomPage({ params }: RoomPageProps) {
                                     <span className="text-[#ededed] text-sm font-medium">
                                         {msg.user}
                                     </span>
-                                    {msg.type === "ai" && msg.role && (
-                                        <span
-                                            className="text-[10px] px-1.5 py-0.5 rounded-full"
-                                            style={{
-                                                color: msg.color,
-                                                backgroundColor: msg.color + "15",
-                                            }}
-                                        >
-                                            {msg.role}
-                                        </span>
-                                    )}
                                     <span className="text-[#3a3a3a] text-[11px]">{msg.time}</span>
                                 </div>
                                 <p className="text-[14px] leading-relaxed text-[#b0b0b0] whitespace-pre-wrap">

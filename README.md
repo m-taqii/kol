@@ -21,7 +21,7 @@ All in one room. All with opinions. All knowing when to shut up.
 
 You have a decision to make. A debate to settle. A topic to explore.
 
-You open a room. Your friends are there. So are five AI models — each with a **distinct personality**, each with a **unique perspective**, and each smart enough to know **when to stay silent**.
+You open a room. Your friends are there. So are AI models — each with a **distinct personality**, each with a **unique perspective**, and each smart enough to know **when to stay silent**.
 
 > **Kōl isn't "AI chat."**<br/>
 > It's your personal board of advisors — always available, never annoying, and they actually disagree with each other.
@@ -168,11 +168,17 @@ kol/
 │       ├── lib/                # Utilities and DB connection
 │       │   └── db.ts
 │       ├── models/             # Mongoose schemas
-│       │   └── user.model.ts   # User schema with bcrypt hashing
+│       │   ├── user.model.ts   # User schema with bcrypt hashing
+│       │   └── room.model.ts   # Room schema (members, AI, memory)
 │       ├── controllers/        # Request handlers
-│       │   └── user.controller.ts
+│       │   ├── user.controller.ts
+│       │   └── room.controller.ts
 │       ├── routes/             # Express routers
-│       │   └── user.route.ts
+│       │   ├── user.route.ts
+│       │   └── room.route.ts
+│       └── middlewares/        # Express middlewares
+│           └── auth.middleware.ts # JWT protection layer
+│
 │       └── agents/             # LangGraph AI pipeline
 │           ├── index.ts        # Graph definition & compilation
 │           └── nodes/
@@ -199,7 +205,9 @@ kol/
 **⚡ Backend**
 - User authentication — register and login with bcrypt password hashing, JWT token generation, httpOnly cookie sessions
 - Duplicate user detection on registration
-- Mongoose User model with username regex validation (`/^[a-z0-9_]{3,20}$/`)
+- Mongoose User model with username regex validation
+- Room Management — Create and manage rooms with multiple human and AI members
+- Authentication Middleware — Verified routes for protected resources
 
 **🧠 AI Pipeline**
 - Gate node — Llama 3.3 70B on Groq with structured output (Zod schema validation)
@@ -211,7 +219,7 @@ kol/
 
 ## 🗺️ Roadmap
 
-### Phase 1 — Foundation `🟢 Completed`
+### Phase 1 — Foundation `✅ Completed`
 - [x] Project scaffolding (Next.js + Express + MongoDB)
 - [x] Auth UI (Login & Signup screens)
 - [x] Auth API with JWT + httpOnly cookies + duplicate detection
@@ -227,15 +235,16 @@ kol/
 - [ ] Staggered response delays for natural feel
 - [ ] Consecutive message limiting enforcement at runtime
 
-### Phase 3 — Rooms & Real-time `🔵 Planned`
+### Phase 3 — Rooms & Real-time `🟢 In Progress`
 - [x] Room list and chat interface UI layout
-- [ ] Room CRUD — create, join, configure model roster
+- [x] Room creation UI (CreateRoomModal)
+- [x] Room model and basic CRUD API
 - [ ] Socket.io integration for real-time messaging
 - [ ] Board member panel per room
 
 ### Phase 4 — Memory `🔵 Planned`
 - [x] Summarizer node (Llama 3.1 8B on Groq)
-- [ ] Trigger compression every 20 messages
+- [ ] Integration of roll-up summarization into room lifecycle
 - [ ] Long-term room memory storage and retrieval
 - [ ] Room Memory viewer for users
 

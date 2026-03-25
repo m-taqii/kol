@@ -54,30 +54,7 @@ export default function SettingsPage() {
                 </div>
             </section>
 
-            {/* Credits Section */}
-            <section className="mb-10">
-                <p className="text-[10px] font-semibold text-[#5a5a5a] uppercase tracking-widest mb-4">
-                    Credits
-                </p>
-                <div className="bg-[#1c1c1c] border border-[#2a2a2a] rounded-xl p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <div>
-                            <p className="text-[#ededed] font-semibold text-lg">12 credits</p>
-                            <p className="text-[#5a5a5a] text-xs">Resets daily at midnight</p>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-[#c4a882] text-sm font-medium">Free Tier</p>
-                            <p className="text-[#5a5a5a] text-xs">50 credits/day</p>
-                        </div>
-                    </div>
-                    <div className="w-full bg-[#2a2a2a] rounded-full h-2">
-                        <div
-                            className="bg-[#c4a882] h-2 rounded-full"
-                            style={{ width: "24%" }}
-                        />
-                    </div>
-                </div>
-            </section>
+
 
             {/* Appearance Section */}
             <section className="mb-10">
