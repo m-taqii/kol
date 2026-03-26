@@ -1,12 +1,17 @@
 import mongoose from "mongoose";
 
-const MONGO_URI = process.env.MONGODB_URI!;
-
-if (!MONGO_URI) {
-    throw new Error("Please provide a valid MongoDB URI in the environment variables");
-}
-
 export const connectDB = async () => {
+    const MONGO_URI = process.env.MONGODB_URI;
+
+    if (!MONGO_URI) {
+        throw new Error("Please provide a valid MONGODB_URI in the environment variables");
+    }
+
+    if (mongoose.connection.readyState >= 1) {
+        console.log("MongoDB is already connected");
+        return;
+    }
+
     try {
         await mongoose.connect(MONGO_URI);
         console.log("MongoDB connected successfully");
