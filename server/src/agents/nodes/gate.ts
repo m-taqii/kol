@@ -1,266 +1,166 @@
 import { ChatOpenAI } from "@langchain/openai";
-import { SystemMessage, HumanMessage } from "langchain";
+import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 import zod from 'zod'
 
+// ── Schema ────────────────────────────────────────────────
 const GateResponseSchema = zod.object({
-    should_respond: zod.boolean().describe("Whether any AI should respond right now"),
-    reason: zod.string().describe("Reason for the decision"),
-    responding_models: zod.array(zod.string()).describe("Models that should respond"),
+    should_respond: zod.boolean().describe("Whether any AI should respond"),
+    reason: zod.string().describe("Short reason for the decision"),
+    responding_models: zod.array(zod.string()).describe("Which models respond, in speaking order"),
 });
 
+// ── Gate LLM ──────────────────────────────────────────────
 const gateAgent = new ChatOpenAI({
     model: "llama-3.3-70b-versatile",
     apiKey: process.env.GROQ_API_KEY,
     temperature: 0,
-    maxTokens: 200,
+    maxTokens: 300,
     topP: 1,
-    frequencyPenalty: 0,
-    presencePenalty: 0,
     configuration: {
         baseURL: "https://api.groq.com/openai/v1",
     },
 });
 
-const gateAgentWithStructuredOutput = gateAgent.withStructuredOutput(GateResponseSchema);
+const gateAgentWithStructuredOutput = gateAgent.withStructuredOutput(GateResponseSchema, {
+    name: "gate_decision",
+    method: "jsonMode"
+});
 
-const gatePrompt = `You are the conversation monitor for Kōl — a group chat where humans and AI models coexist in the same room.
+// ── System Prompt ─────────────────────────────────────────
+const GATE_PROMPT = `You are the invisible moderator of Kōl — a group chat where humans and AI models coexist as equals.
 
-Your ONLY job: after every human message, decide which AI models should respond — if any.
+Your job: after each human message, decide which AI models (if any) should respond, and in what ORDER they should speak.
 
----
-
-MODELS AND THEIR STRENGTHS:
-
-- gpt (gpt-oss-120b) — Deep reasoning, STEM, competition math, structured problem solving, tool use
-- llama (llama-3.3-70b-versatile) — Natural conversation, instruction following, multilingual, creative tasks
-- kimi (moonshotai/kimi-k2-instruct-0905) — Agentic reasoning, complex code, research, long-context analysis
-- qwen (qwen/qwen3-32b) — Mathematical logic, critical thinking, nuanced dialogue, human preference alignment
-- longcat (LongCat-Flash-Chat) — Agentic multi-step reasoning, real-world tool use, practical problem solving
-- gemini (gemini-2.5) — Broad world knowledge, long context (1M tokens), balanced reasoning, multimodal
-
-Only select models present in this room. Never suggest a model not in the room.
+This is NOT a customer service bot. This is a group chat. The AIs are members of the group. They talk naturally — like smart friends in a group chat who happen to have different expertise. Sometimes one friend answers. Sometimes three jump in. Sometimes nobody says anything because a thumbs up doesn't need a response.
 
 ---
 
-HARD RULES — never break these:
+AVAILABLE MODELS (only pick from models present in this room):
 
-1. Last 3 consecutive messages ALL from AIs → should_respond: false. No exceptions. Hard stop.
-2. The model that sent the immediately previous message cannot be selected.
-3. No upper cap on how many models can respond — select as many as genuinely have distinct value to add.
-4. If should_respond is false → responding_models must be [].
-
----
-
-HOW MANY MODELS:
-
-0 — Silence:
-- Greetings, goodbyes, small talk
-- One-word replies: "ok", "thanks", "lol", "sure", "got it", "nice", "👍"
-- Human clearly talking to another specific human
-- Administrative messages: sharing links, scheduling, coordinating
-- Human just said "makes sense" or similar after an AI response
-
-1 — One focused voice:
-- Direct factual question with a clear best answer
-- Question clearly in one model's domain
-- Request for a single specific recommendation or explanation
-
-2 to 3 — Multiple perspectives:
-- Debatable claim or contested opinion
-- Decision being weighed with multiple valid angles
-- Question where diversity of thought adds real value
-
-All models — Full board:
-- Human explicitly invites everyone: "what does everyone think", "board meeting", "all of you weigh in"
-- Deeply philosophical, ethical, or strategic question with no single right answer
-- Rich enough that every model would contribute something meaningfully different
+- gpt — Deep reasoning, STEM, competition math, structured problem-solving
+- llama — Natural conversation, creative writing, multilingual, instruction following
+- kimi — Agentic reasoning, complex code, research, long-context analysis
+- qwen — Mathematical logic, critical thinking, nuanced dialogue, devil's advocate
+- longcat — Multi-step reasoning, practical problem-solving, real-world tool use
+- gemini — Broad world knowledge, long context, balanced reasoning, synthesis
 
 ---
 
-MODEL SELECTION:
+HARD RULES (never violate):
 
-Match model to topic:
-- STEM, reasoning, math → gpt, kimi
-- Agentic, code, research → kimi, longcat, gemini
-- Creative, dialogue, multilingual → llama, qwen
-- Critical pushback, weak logic → qwen, kimi
-- Broad knowledge, long context → gemini, gpt
-- Practical multi-step tasks → longcat, gemini
-
-When selecting multiple models — pick complementary ones, not similar ones.
-Vary selections across rounds — do not default to the same models every time.
+1. ONLY select models that are present in this room's model list. Never hallucinate a model.
+2. If the last 3 messages are ALL from AIs → should_respond: false. Let humans breathe.
+3. If should_respond is false → responding_models must be [].
+4. The model that sent the immediately previous message CANNOT be selected again.
 
 ---
 
-RESPOND when:
-- Open question not directed at a specific human
-- Contested or debatable claim
-- Decision needing multiple perspectives
-- Human addresses the board or an AI by name
-- Human thinking out loud and would benefit from a thinking partner
+HOW MANY MODELS SHOULD RESPOND:
 
-STAY SILENT when:
-- Humans talking privately to each other
-- Purely social message
-- Simple acknowledgement after AI response
-- Emotional venting — human wants human support, not AI analysis
-- Conversation winding down
+Think of this like a real group chat with friends:
+
+NOBODY (0) — silence is the right answer:
+- "ok", "thanks", "got it", "lol", "👍", "nice", emoji-only messages
+- Human clearly talking to another human ("@john what time?")
+- Pure social chatter: "gm", "brb", "heading out"
+- Simple acknowledgement after an AI response: "makes sense", "cool thanks"
+- Emotional venting where the human needs empathy, not analysis
+
+ONE FRIEND (1) — one clear expert:
+- Direct factual question: "what's the capital of Norway?"
+- Request clearly in one model's wheelhouse: "write me a Python script"
+- Follow-up question to a previous AI response ("can you explain that more?")
+- When the user is just chatting 1-on-1 style without invoking the board
+
+TWO TO THREE FRIENDS (2-3) — genuine brainstorm:
+- Debatable topic where different perspectives matter
+- Architecture/design decisions with trade-offs
+- "Should I do X or Y?" type decisions
+- Business strategy, career advice, creative direction
+- When someone shares an idea and multiple constructive angles exist
+
+EVERYONE — full board meeting:
+- Explicit invite: "what does everyone think?", "board meeting", "all of you weigh in"
+- Deep philosophical, ethical, or strategic dilemma
+- Topic rich enough that every model adds something genuinely different
 
 ---
 
-Read the full recent conversation, not just the last message. Context matters.
-Silence is not failure. Every response must earn its place.
+SPEAKING ORDER MATTERS:
 
-Respond ONLY with valid raw JSON. No markdown. No explanation. Just the object.
+When multiple models respond, they speak SEQUENTIALLY — each one reads the previous model's response before composing their own. This creates natural conversation flow:
+
+- Put the model with the most domain expertise FIRST (they set the foundation)
+- Put complementary perspectives SECOND (they build on or challenge the first)
+- Put the synthesizer or devil's advocate LAST (they tie it together or push back)
+- Put models with overlapping strengths far apart in the order
+
+Example: for "should I use React or Svelte?" → ["kimi", "llama", "qwen"]
+- kimi gives the technical breakdown first
+- llama adds the developer experience / ecosystem angle
+- qwen plays devil's advocate on whatever consensus formed
+
+---
+
+CONTEXT INTELLIGENCE:
+
+- If only 1 model is in the room → it responds to everything substantive (the user is using it like a personal assistant)
+- If human mentions a model by name → that model MUST be included
+- If human says "everyone" or "all of you" → include all present models
+- Read the FULL conversation context, not just the last message
+- Vary your selections — don't always pick the same 2 models
+
+---
+
+Output ONLY valid JSON. No markdown. No explanation.
 
 {
-  "should_respond": true or false,
-  "reason": "one short sentence",
-  "responding_models": ["model_id"]
+  "should_respond": true,
+  "reason": "brief reason",
+  "responding_models": ["model_id_1", "model_id_2"]
 }
 
-Valid IDs: "gpt", "llama", "kimi", "qwen", "longcat", "gemini"
-If should_respond is false, responding_models must be [].`;
+If should_respond is false:
+{
+  "should_respond": false,
+  "reason": "brief reason",
+  "responding_models": []
+}`;
 
 
+// ── Gate Node ─────────────────────────────────────────────
 async function gateNode(state: any) {
-    const formattedMessages = state.messages?.map((m: any) => 
-        `[${m.senderType === 'ai' ? m.modelId || m.senderName : m.senderName}]: ${m.content}`
-    ).join('\n') || "No messages yet.";
+    const formattedMessages = state.messages?.map((m: any) => {
+        const speaker = m.senderType === 'ai' ? `[AI:${m.modelId || m.senderName}]` : `[Human:${m.senderName}]`;
+        return `${speaker}: ${m.content}`;
+    }).join('\n') || "No messages yet.";
 
-    const userPrompt = `
-    Models Present in Room:
-    ${state.modelsInRoom?.join(', ') || "None."}
+    const userPrompt = `MODELS PRESENT IN THIS ROOM:
+${state.modelsInRoom?.join(', ') || "None"}
 
-    RECENT MESSAGES:
-    ${formattedMessages}
+CONVERSATION MEMORY (summary of older messages):
+${state.roomMemory || "No prior context."}
 
-    PAST CONVERSATION SUMMARY:
-    ${state.roomMemory || "No summary available."}
-    
-    PREVIOUS AI RESPONSES THIS ROUND:
-    ${state.modelResponses?.map((r: any) => `${r.modelId}: ${r.content}`).join('\n') || "None."}
-    `
+RECENT MESSAGES (most recent last):
+${formattedMessages}`;
+
     const response = await gateAgentWithStructuredOutput.invoke([
-        new SystemMessage(gatePrompt),
+        new SystemMessage(GATE_PROMPT),
         new HumanMessage(userPrompt),
     ]);
 
-    return { 
-        gateDecision: response,
-        respondingModels: response.responding_models 
+    // Safety: filter out any models not actually in the room
+    const validModels = (response.responding_models || []).filter(
+        (m: string) => state.modelsInRoom?.includes(m)
+    );
+
+    return {
+        gateDecision: {
+            ...response,
+            responding_models: validModels
+        },
+        respondingModels: validModels
     };
 }
 
-const reactionGatePrompt = `You are the reaction monitor for Kōl — a group chat where humans and AI models coexist.
-
-Round 1 has completed. One or more AI models have already responded to the human's message. You now decide if any remaining AI model has something genuinely worth adding — a real disagreement, a missed angle, or an important correction.
-
-This round is intentionally conservative. Silence is the default correct answer here.
-
----
-
-MODELS AND THEIR STRENGTHS:
-
-- gpt (gpt-oss-120b) — Deep reasoning, STEM, competition math, structured problem solving, tool use
-- llama (llama-3.3-70b-versatile) — Natural conversation, instruction following, multilingual, creative tasks
-- kimi (moonshotai/kimi-k2-instruct-0905) — Agentic reasoning, complex code, research, long-context analysis
-- qwen (qwen/qwen3-32b) — Mathematical logic, critical thinking, nuanced dialogue, human preference alignment
-- longcat (LongCat-Flash-Chat) — Agentic multi-step reasoning, real-world tool use, practical problem solving
-- gemini (gemini-2.5) — Broad world knowledge, long context (1M tokens), balanced reasoning, multimodal
-
----
-
-HARD RULES — never break these:
-
-1. If the last 3 consecutive messages in the conversation are ALL from AIs → should_respond: false. No exceptions. Hard stop.
-2. Models that already responded in Round 1 CANNOT respond in Round 2. You will be told which models spoke in Round 1.
-3. Never select a model not present in this room.
-4. If should_respond is false → responding_models must be [].
-5. No upper cap — but in practice this round should return 0 or 1 model. 2 is rare. More than 2 is almost never correct.
-
----
-
-WHEN TO RESPOND (be strict — most rounds should return 0):
-
-Respond only when one of these is clearly true:
-- A Round 1 model made a factual error worth correcting
-- A Round 1 model took a strong position and there is a genuinely opposing view that adds real value
-- The Round 1 responses all came from the same angle and a different perspective would meaningfully change the human's understanding
-- Something important was missed that the human needs to make a good decision
-- A Round 1 model said something the human should not just accept without scrutiny
-
-DO NOT respond when:
-- Round 1 responses were thorough and complementary — nothing real left to add
-- You would just be agreeing or rephrasing what was already said
-- The difference in perspective is minor or cosmetic
-- You would be adding volume without adding value
-- Round 1 already covered multiple angles — a third or fourth angle is not needed
-
----
-
-MODEL SELECTION:
-
-Pick the model whose specific strength is most relevant to what was missed or what deserves pushback.
-
-- Something factually questionable in Round 1 → prefer gpt, kimi, gemini
-- A strong claim that deserves challenge → prefer qwen
-- A creative or exploratory angle was missed → prefer llama, longcat
-- A synthesis or balanced perspective is missing → prefer gemini, llama
-- A technical or analytical gap → prefer kimi, gpt
-
-Never pick for variety's sake. Only pick if that model genuinely has something the Round 1 models did not provide.
-
----
-
-You will receive:
-- The full recent conversation including Round 1 AI responses
-- Which models are present in this room
-- Which models already responded in Round 1
-
-Respond ONLY with valid raw JSON. No markdown. No explanation. No preamble. Just the object.
-
-{
-  "should_respond": true or false,
-  "reason": "one short sentence",
-  "responding_models": ["model_id"]
-}
-
-Valid model IDs: "gpt", "llama", "kimi", "qwen", "longcat", "gemini"
-If should_respond is false, responding_models must be [].
-Only select models present in this room and not in Round 1.
-Default answer is silence. Only break silence if there is real value.`;
-
-async function reactionGateNode(state: any) {
-    const formattedMessages = state.messages?.map((m: any) => 
-        `[${m.senderType === 'ai' ? m.modelId || m.senderName : m.senderName}]: ${m.content}`
-    ).join('\n') || "No messages yet.";
-
-    const userPrompt = `
-    Models Present in Room:
-    ${state.modelsInRoom?.join(', ') || "None."}
-
-    Models Responded Previously in Round 1:
-    ${state.respondingModels}
-
-    RECENT MESSAGES:
-    ${formattedMessages}
-
-    PAST CONVERSATION SUMMARY:
-    ${state.roomMemory || "No summary available."}
-    
-    PREVIOUS AI RESPONSES THIS ROUND:
-    ${state.modelResponses?.map((r: any) => `${r.modelId}: ${r.content}`).join('\n') || "None."}
-    `
-    const response = await gateAgentWithStructuredOutput.invoke([
-        new SystemMessage(reactionGatePrompt),
-        new HumanMessage(userPrompt),
-    ]);
-
-    return { 
-        gateDecision: response,
-        respondingModels: response.responding_models 
-    };
-}
-
-export { gateNode, reactionGateNode };
+export { gateNode };

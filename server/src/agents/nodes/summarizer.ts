@@ -1,40 +1,59 @@
 import { ChatOpenAI } from "@langchain/openai";
-import { SystemMessage, HumanMessage } from "langchain";
+import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 
 const summarizerAgent = new ChatOpenAI({
     model: "llama-3.1-8b-instant",
     apiKey: process.env.GROQ_API_KEY,
     temperature: 0,
     topP: 1,
-    frequencyPenalty: 0,
-    presencePenalty: 0,
     configuration: {
         baseURL: "https://api.groq.com/openai/v1",
     },
 });
 
-export const SUMMARIZER_SYSTEM_PROMPT = `You are a conversation summarizer for Kōl — a group chat platform where humans and AI models discuss topics together.
+export const SUMMARIZER_SYSTEM_PROMPT = `You are the memory engine for Kōl — a group chat where humans and AI models discuss topics together as equals.
 
-Your job is to compress a conversation into a concise memory summary that will be used as context for future AI responses in this room.
+Your job: compress conversations into a running memory that helps AIs understand the room's history and maintain continuity.
 
-RULES:
+WHAT TO CAPTURE:
+- Key topics discussed and conclusions reached
+- Important decisions, agreements, and disagreements
+- Technical details: names, numbers, code snippets, URLs, specific recommendations
+- Each participant's stance on debated topics (attribute opinions to speakers)
+- Unresolved questions or topics the group plans to revisit
+- The overall tone and direction of the conversation
+
+WHAT TO IGNORE:
+- Greetings, goodbyes, "thanks", "got it" — social filler
+- Repeated information already in the existing summary
+- Meta-discussion about the chat itself
+
+FORMAT RULES:
 - Write in third person, past tense
-- Capture key topics discussed, opinions expressed, decisions made, and conclusions reached
-- Note which perspectives came from humans vs AI models when relevant
-- Preserve important facts, numbers, names, and technical details
-- Ignore casual filler — greetings, one word replies, off-topic small talk
-- Output plain text only — no bullet points, no headers, no markdown
-- If there is an existing summary provided, merge it with the new messages into one updated summary — do not just append
-- Make sure the summary is not too long, it should be concise and to the point and no important information should be lost. the summary should provide the full context of the conversation in the room.
+- Plain text only — no bullets, no headers, no markdown
+- If an existing summary is provided, MERGE the new information into it — rewrite as one cohesive summary, don't just append
+- Keep it under 400 words — be ruthlessly concise but never lose important context
+- Prioritize recent discussion over older content when trimming
 
-This summary will be silently injected as context into future AI responses. It must be useful, accurate and compact.`;
+This summary is silently injected as context into future AI responses. Accuracy and conciseness are everything.`;
 
 async function summarizerNode(state: any) {
+    const formattedMessages = state.messages?.map((m: any) => {
+        const speaker = m.senderType === 'ai' ? `[AI:${m.modelId || m.senderName}]` : `[Human:${m.senderName}]`;
+        return `${speaker}: ${m.content}`;
+    }).join('\n') || "No messages.";
+
+    const userPrompt = `EXISTING SUMMARY:
+${state.roomMemory || "None — this is the beginning of the conversation."}
+
+NEW MESSAGES TO INCORPORATE:
+${formattedMessages}`;
+
     const response = await summarizerAgent.invoke([
         new SystemMessage(SUMMARIZER_SYSTEM_PROMPT),
-        new HumanMessage(state.messages),
+        new HumanMessage(userPrompt),
     ]);
-    return { context: response.content as string };
+    return { roomMemory: response.content as string };
 }
 
 export default summarizerNode;

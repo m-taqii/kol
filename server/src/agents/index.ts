@@ -1,6 +1,7 @@
 import { StateGraph, Annotation } from "@langchain/langgraph";
 import modelNode from "./nodes/models";
-import { gateNode, reactionGateNode } from "./nodes/gate";
+import summarizerNode from "./nodes/summarizer";
+import { gateNode } from "./nodes/gate";
 import { START, END } from "@langchain/langgraph";
 
 interface RoomMessage {
@@ -35,18 +36,29 @@ export const GraphState = Annotation.Root({
 });
 
 function shouldContinue(state: any) {
-    return state.gateDecision.should_respond ? "models" : END;
+    if (state.gateDecision?.should_respond && state.respondingModels?.length > 0) {
+        return "models";
+    }
+    return END;
+}
+
+function shouldSummarize(state: any) {
+    // Summarize every 10 messages to keep memory fresh
+    const count = state.messageCount || 0;
+    if (count > 0 && count % 10 === 0) {
+        return "summarizer";
+    }
+    return END;
 }
 
 const graph = new StateGraph(GraphState)
     .addNode("gate", gateNode)
     .addNode("models", modelNode)
-    .addNode("reactionGate", reactionGateNode)
+    .addNode("summarizer", summarizerNode)
     .addEdge(START, "gate")
     .addConditionalEdges("gate", shouldContinue)
-    .addEdge("models", "reactionGate")
-    .addConditionalEdges("reactionGate", shouldContinue)
-    .addEdge("models", END);
+    .addConditionalEdges("models", shouldSummarize)
+    .addEdge("summarizer", END);
 
 const compiledGraph = graph.compile();
 export default compiledGraph;

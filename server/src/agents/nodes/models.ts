@@ -1,137 +1,208 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { SystemMessage, HumanMessage, AIMessage, BaseMessage } from "@langchain/core/messages";
 
-async function modelAgent(model: string) {
+// ── Model Registry ────────────────────────────────────────
+// Each model gets its own LLM instance and personality profile
 
-    switch (model) {
-        case "gpt":
-            return new ChatOpenAI({
-                model: "openai/gpt-oss-120b",
-                apiKey: process.env.GROQ_API_KEY,
-                temperature: 0.8,
-                topP: 1,
-                frequencyPenalty: 0,
-                presencePenalty: 0,
-                configuration: {
-                    baseURL: "https://api.groq.com/openai/v1",
-                },
-            });
-        case "llama":
-            return new ChatOpenAI({
-                model: "llama-3.3-70b-versatile",
-                apiKey: process.env.GROQ_API_KEY,
-                temperature: 0.8,
-                topP: 1,
-                frequencyPenalty: 0,
-                presencePenalty: 0,
-                configuration: {
-                    baseURL: "https://api.groq.com/openai/v1",
-                },
-            });
-        case "kimi":
-            return new ChatOpenAI({
-                model: "moonshotai/kimi-k2-instruct-0905",
-                apiKey: process.env.GROQ_API_KEY,
-                temperature: 0.8,
-                topP: 1,
-                frequencyPenalty: 0,
-                presencePenalty: 0,
-                configuration: {
-                    baseURL: "https://api.groq.com/openai/v1",
-                },
-            });
-        case "qwen":
-            return new ChatOpenAI({
-                model: "qwen/qwen3-32b",
-                apiKey: process.env.GROQ_API_KEY,
-                temperature: 0.8,
-                topP: 1,
-                frequencyPenalty: 0,
-                presencePenalty: 0,
-                configuration: {
-                    baseURL: "https://api.groq.com/openai/v1",
-                },
-            });
-        case "longcat":
-            return new ChatOpenAI({
-                model: "LongCat-Flash-Chat",
-                apiKey: process.env.LONGCAT_API_KEY,
-                temperature: 0.8,
-                topP: 1,
-                frequencyPenalty: 0,
-                presencePenalty: 0,
-                configuration: {
-                    baseURL: "https://api.longcat.chat/openai",
-                },
-            });
-
-        default:
-            throw new Error(`Invalid model ${model}`);
-    }
+interface ModelConfig {
+    llmModel: string;
+    apiKey: string;
+    baseURL: string;
+    temperature: number;
+    personality: string;
 }
 
-const getModelSystemPrompt = (modelId: string, memory: string) => `
-You are an AI participant in a collective intelligence group chat named Kōl.
+function getModelConfig(modelId: string): ModelConfig {
+    const configs: Record<string, ModelConfig> = {
+        gpt: {
+            llmModel: "openai/gpt-oss-120b",
+            apiKey: process.env.GROQ_API_KEY || "",
+            baseURL: "https://api.groq.com/openai/v1",
+            temperature: 0.7,
+            personality: `You are GPT — the deep thinker of the group. You're known for structured reasoning, breaking down complex problems step by step, and being thorough without being verbose. You often bring mathematical or logical clarity to messy discussions. You're confident but not arrogant. When you disagree with another AI, you explain why clearly. When you agree, you don't just echo — you add something.`,
+        },
+        llama: {
+            llmModel: "llama-3.3-70b-versatile",
+            apiKey: process.env.GROQ_API_KEY || "",
+            baseURL: "https://api.groq.com/openai/v1",
+            temperature: 0.85,
+            personality: `You are Llama — the conversationalist. You're warm, approachable, and great at explaining things in plain language. You bring creative angles and real-world analogies. In group discussions, you're the one who makes complex ideas accessible. You naturally build bridges between different viewpoints. You're not afraid to be casual — this is a group chat, not a thesis defense.`,
+        },
+        kimi: {
+            llmModel: "moonshotai/kimi-k2-instruct-0905",
+            apiKey: process.env.GROQ_API_KEY || "",
+            baseURL: "https://api.groq.com/openai/v1",
+            temperature: 0.7,
+            personality: `You are Kimi — the engineer. You think in systems, architectures, and code. You're the one who spots implementation details others miss. In brainstorming sessions, you ground abstract ideas in technical reality. You're direct and concise — no fluff. When others are debating theory, you ask "but how would we actually build this?" You push for practical clarity.`,
+        },
+        qwen: {
+            llmModel: "qwen/qwen3-32b",
+            apiKey: process.env.GROQ_API_KEY || "",
+            baseURL: "https://api.groq.com/openai/v1",
+            temperature: 0.75,
+            personality: `You are Qwen — the critical thinker and devil's advocate. You naturally question assumptions, spot weak reasoning, and play the "have you considered..." role. You're not contrarian for the sake of it — you genuinely want to stress-test ideas so the group arrives at stronger conclusions. You're sharp but respectful. When everyone agrees too quickly, you're the one who slows things down.`,
+        },
+        longcat: {
+            llmModel: "LongCat-Flash-Chat",
+            apiKey: process.env.LONGCAT_API_KEY || "",
+            baseURL: "https://api.longcat.chat/openai",
+            temperature: 0.75,
+            personality: `You are LongCat — the practical problem-solver. You think in action steps, workflows, and "here's what you should actually do." While others debate the theory, you map out the execution. You're great at multi-step planning and connecting dots across different domains. You keep things grounded and actionable.`,
+        },
+    };
 
-In this room, you coexist with other humans and other AI models. Your goal is to contribute meaningfully to the conversation.
+    const config = configs[modelId];
+    if (!config) throw new Error(`Unknown model: ${modelId}`);
+    return config;
+}
 
-CONTEXT:
-${memory ? `Past Summary: ${memory}` : "Beginning of conversation."}
-
-GUIDELINES:
-- Be helpful, insightful, and authentic to your specific model identity.
-- Acknowledge what others (humans or AIs) have said if relevant.
-- Keep responses relatively concise unless a deep dive is requested.
-- You are talking in a real-time chat. No need for formal letter formatting.
-- If you were selected to respond, it is because your specific perspective was deemed valuable by a moderator.
-
-You are acting as: ${modelId}
-`;
-
-function mapMessages(messages: any[]): BaseMessage[] {
-    return messages.map((m) => {
-        if (m.senderType === "ai") {
-            return new AIMessage({ content: m.content, name: m.senderName });
-        }
-        return new HumanMessage({ content: m.content, name: m.senderName });
+function createModelLLM(config: ModelConfig): ChatOpenAI {
+    return new ChatOpenAI({
+        model: config.llmModel,
+        apiKey: config.apiKey,
+        temperature: config.temperature,
+        topP: 1,
+        frequencyPenalty: 0,
+        presencePenalty: 0,
+        configuration: {
+            baseURL: config.baseURL,
+        },
     });
 }
 
+// ── System Prompt Builder ─────────────────────────────────
+function buildSystemPrompt(
+    modelId: string,
+    personality: string,
+    memory: string,
+    isOnlyModel: boolean,
+    speakingPosition: number,
+    totalSpeakers: number,
+    previousResponses: { modelId: string; content: string }[],
+): string {
+
+    const contextBlock = memory
+        ? `\nCONVERSATION HISTORY SUMMARY:\n${memory}`
+        : "";
+
+    // Solo mode: user is using this like a personal assistant
+    if (isOnlyModel) {
+        return `${personality}
+
+You are the only AI in this room. The user is chatting with you directly, like a personal assistant. Be helpful, conversational, and adapt to their style. If they're casual, be casual. If they need deep analysis, go deep.
+${contextBlock}
+
+RULES:
+- Be conversational — this is a chat, not an essay
+- Match the user's energy and formality level
+- Keep responses focused and useful
+- Use markdown for code blocks, lists, or structured content when helpful
+- No need to introduce yourself or explain what you are`;
+    }
+
+    // Multi-model: natural group chat member
+    let positionGuidance = "";
+    if (totalSpeakers === 1) {
+        positionGuidance = "You're the only AI responding to this message. Give a complete, helpful response.";
+    } else if (speakingPosition === 0) {
+        positionGuidance = "You're speaking FIRST in this round. Set the foundation — give your core perspective on the topic. Others will build on or challenge what you say.";
+    } else if (speakingPosition === totalSpeakers - 1) {
+        positionGuidance = "You're speaking LAST in this round. You've read what the other AIs said. Your job: synthesize, challenge, or add what's missing. Don't repeat what's been said — build on it, disagree with it, or tie it together.";
+    } else {
+        positionGuidance = "You're speaking in the MIDDLE of this round. You've read the previous AI response(s). Build on them, offer a different angle, or respectfully push back. Don't echo — add value.";
+    }
+
+    let previousResponsesBlock = "";
+    if (previousResponses.length > 0) {
+        previousResponsesBlock = `\n\nOTHER AI RESPONSES THIS ROUND (they spoke before you — READ these before responding):\n${previousResponses.map(r => `[${r.modelId}]: ${r.content}`).join('\n\n')}`;
+    }
+
+    return `${personality}
+
+You are in a Kōl group chat with humans and other AI models. You are a MEMBER of this group — not a service, not an assistant. You're like a smart friend with specific expertise who naturally contributes to conversations.
+${contextBlock}
+${previousResponsesBlock}
+
+YOUR POSITION: ${positionGuidance}
+
+RULES FOR NATURAL GROUP CHAT:
+- Talk like a real person in a group chat — concise, direct, natural
+- NO greetings, NO sign-offs, NO "Great question!", NO "As an AI..."
+- If you agree with a previous response, say so briefly and add your unique angle — don't just rephrase
+- If you disagree, say it directly: "I'd push back on that because..."
+- Build on others' ideas: "Adding to what [model] said..."
+- It's okay to be opinionated — that's why you're in the group
+- Keep it under 120 words unless the topic genuinely needs depth
+- Use markdown for code, lists, or structured content when it helps clarity
+- You can use casual language, contractions, even humor when appropriate
+- Reference previous messages naturally, like a human would in a group chat`;
+}
+
+// ── Message Mapper ────────────────────────────────────────
+function mapMessages(messages: any[]): BaseMessage[] {
+    return messages.map((m) => {
+        const name = m.senderType === "ai" ? (m.modelId || m.senderName) : m.senderName;
+        if (m.senderType === "ai") {
+            return new AIMessage({ content: m.content, name });
+        }
+        return new HumanMessage({ content: m.content, name });
+    });
+}
+
+// ── Model Node ────────────────────────────────────────────
+// Models respond SEQUENTIALLY so each can see what came before
+
 async function modelNode(state: any) {
-    const { respondingModels, messages, roomMemory } = state;
+    const { respondingModels, messages, roomMemory, modelsInRoom } = state;
 
     if (!respondingModels || respondingModels.length === 0) {
         return { modelResponses: [] };
     }
 
     const conversationHistory = mapMessages(messages);
+    const isOnlyModel = modelsInRoom?.length === 1;
+    const responses: { modelId: string; content: string; error: boolean }[] = [];
 
-    const modelPromises = respondingModels.map(async (modelId: string) => {
+    // Sequential execution: each model sees previous models' responses
+    for (let i = 0; i < respondingModels.length; i++) {
+        const modelId = respondingModels[i];
         try {
-            const ai = await modelAgent(modelId);
-            const systemPrompt = getModelSystemPrompt(modelId, roomMemory);
-            
-            const response = await ai.invoke([
+            const config = getModelConfig(modelId);
+            const llm = createModelLLM(config);
+
+            const systemPrompt = buildSystemPrompt(
+                modelId,
+                config.personality,
+                roomMemory || "",
+                isOnlyModel,
+                i,
+                respondingModels.length,
+                responses.filter(r => !r.error), // pass only successful previous responses
+            );
+
+            const response = await llm.invoke([
                 new SystemMessage(systemPrompt),
                 ...conversationHistory
             ]);
 
-            return {
+            let rawContent = response.content as string;
+            // Remove <think>...</think> tags and all their inner contents (common in deepseek/qwen-qwq models)
+            const cleanedContent = rawContent.replace(/<think>[\s\S]*?<\/think>\n*/g, "").trim();
+
+            responses.push({
                 modelId,
-                content: response.content as string,
+                content: cleanedContent,
                 error: false
-            };
+            });
         } catch (error) {
             console.error(`Error invoking model ${modelId}:`, error);
-            return {
+            responses.push({
                 modelId,
-                content: "I'm having trouble connecting to my brain right now.",
+                content: "Having a brain freeze — give me a sec.",
                 error: true
-            };
+            });
         }
-    });
-
-    const responses = await Promise.allSettled(modelPromises);
+    }
 
     return { modelResponses: responses };
 }
