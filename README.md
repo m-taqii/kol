@@ -81,6 +81,7 @@ Every AI in the room has an identity. A voice. A color.
 | `kimi` | Kimi K2 Instruct | Groq |
 | `qwen` | Qwen3 32B | Groq |
 | `longcat` | LongCat Flash Chat | LongCat API |
+| `gemini` | Gemini 2.5 Flash | Google Gemini API |
 
 All models run through the OpenAI-compatible `ChatOpenAI` interface from LangChain, making it straightforward to swap or add new models. Each model is displayed by **friendly name + version badge** with a unique **color identity** in chat.
 
@@ -169,7 +170,8 @@ kol/
 │       │   └── db.ts
 │       ├── models/             # Mongoose schemas
 │       │   ├── user.model.ts   # User schema with bcrypt hashing
-│       │   └── room.model.ts   # Room schema (members, AI, memory)
+│       │   ├── room.model.ts   # Room schema (members, AI, memory)
+│       │   └── message.model.ts # Message history collection
 │       ├── controllers/        # Request handlers
 │       │   ├── user.controller.ts
 │       │   └── room.controller.ts
@@ -181,10 +183,13 @@ kol/
 │
 │       └── agents/             # LangGraph AI pipeline
 │           ├── index.ts        # Graph definition & compilation
-│           └── nodes/
-│               ├── gate.ts     # Conversation gating logic
-│               ├── models.ts   # Multi-model routing
-│               └── summarizer.ts  # Memory compression
+│           ├── nodes/          # Graph components
+│           │   ├── gate.ts     # Conversation gating logic
+│           │   ├── models.ts   # Multi-model routing
+│           │   └── summarizer.ts  # Memory compression
+│           └── tools/          # Agentic tools
+│               ├── searchTool.ts  # Web search (Tavily)
+│               └── urlTool.ts     # URL reading (Jina AI)
 │
 └── README.md
 ```
@@ -227,31 +232,32 @@ kol/
 - [x] MongoDB connection wiring
 - [x] Connect frontend auth forms to backend API
 
-### Phase 2 — The Brain `🟢 In Progress`
+### Phase 2 — The Brain `✅ Completed`
 - [x] Gate system — Llama on Groq with structured output
-- [x] Multi-model routing (5 models across 2 providers)
-- [x] LangGraph state graph compiled
-- [ ] Wire the LangGraph pipeline into the message flow
-- [ ] Staggered response delays for natural feel
-- [ ] Consecutive message limiting enforcement at runtime
+- [x] Multi-model routing (6 models across 3 providers)
+- [x] Sequential model reasoning (AIs read previous AI answers)
+- [x] LangGraph state graph wired into message flow
+- [x] Staggered, realistic typing indicator response delays
+- [x] Consecutive message limiting enforcement at runtime
 
-### Phase 3 — Rooms & Real-time `🟢 In Progress`
+### Phase 3 — Rooms & Real-time `✅ Completed`
 - [x] Room list and chat interface UI layout
-- [x] Room creation UI (CreateRoomModal)
-- [x] Room model and basic CRUD API
-- [ ] Socket.io integration for real-time messaging
-- [ ] Board member panel per room
+- [x] Room creation UI
+- [x] Room model and CRUD API
+- [x] Socket.io integration for real-time messaging and typing events
+- [x] Message persistence in database
 
-### Phase 4 — Memory `🔵 Planned`
+### Phase 4 — Memory `✅ Completed`
 - [x] Summarizer node (Llama 3.1 8B on Groq)
-- [ ] Integration of roll-up summarization into room lifecycle
-- [ ] Long-term room memory storage and retrieval
+- [x] Integration of roll-up summarization into room lifecycle (every 10 messages)
+- [x] Long-term room memory storage
 - [ ] Room Memory viewer for users
 
-### Phase 5 — Tool Layer `🟡 Future`
-- [ ] `@mention` detection and routing
-- [ ] Tool execution framework per model
-- [ ] Search, summarization, and drafting tools
+### Phase 5 — Tool Layer `🟢 In Progress`
+- [x] Tool execution logic inside the Model node
+- [x] `tavily_search_results_json` core capability
+- [x] `read_url` (Jina AI) core capability
+- [ ] `@mention` detection and routing from UI
 
 ### Phase 6 — Scale `🟣 Vision`
 - [ ] Credit system and usage tracking
