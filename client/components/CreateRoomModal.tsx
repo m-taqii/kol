@@ -108,7 +108,7 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
                 >
                   <div
                     className="w-2.5 h-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: model.color }}
+                    style={{ background: model.color }}
                   />
                   <div className="flex-1 min-w-0">
                     <p className={`text-[13px] truncate ${selectedModels.includes(model.id) ? "text-[#ededed] font-medium" : "text-[#5a5a5a]"}`}>

@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Settings, Layers, Users, LogOut, Hash } from "lucide-react";
-import { useState } from "react";
-import { CURRENT_USER, ROOMS } from "../app/me/data/mock";
+import { useState, useEffect } from "react";
 import CreateRoomModal from "./CreateRoomModal";
+import axios from "axios";
 
 const NAV_ITEMS = [
     { href: "/me", label: "Rooms", icon: Layers },
@@ -13,7 +13,38 @@ const NAV_ITEMS = [
     { href: "/me/settings", label: "Settings", icon: Settings },
 ];
 
+interface Room {
+    _id: string;
+    name: string;
+    members: any[];
+    aiMembers: string[];
+    owner: string;
+    createdAt: string;
+    updatedAt: string;
+    lastMessage?: string;
+    unread?: boolean;
+}
+
 export default function Sidebar() {
+    const [rooms, setRooms] = useState<Room[]>([]);
+    const [user, setUser] = useState<{ name: string; username: string } | null>(null);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [roomsRes, userRes] = await Promise.all([
+                    axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/room/list`, { withCredentials: true }),
+                    axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/me`, { withCredentials: true })
+                ]);
+                setRooms(roomsRes.data);
+                setUser(userRes.data);
+            } catch (err) {
+                console.error("Sidebar fetch error:", err);
+            }
+        };
+        fetchData();
+    }, [])
+
     const pathname = usePathname();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -22,14 +53,14 @@ export default function Sidebar() {
             {/* User Info */}
             <div className="px-5 pt-5 pb-4">
                 <div className="flex items-center gap-3 mb-5">
-                    <div className="w-9 h-9 rounded-full bg-[#c4a882]/10 flex items-center justify-center text-[#c4a882] text-xs font-bold">
-                        {CURRENT_USER.initials}
+                    <div className="w-9 h-9 rounded-full bg-[#c4a882]/10 flex items-center justify-center text-[#c4a882] text-xs font-bold uppercase">
+                        {user ? user.name.split(" ").map(n => n[0]).join("") : "..."}
                     </div>
                     <div>
                         <p className="text-[#ededed] text-[13px] font-semibold leading-tight">
-                            {CURRENT_USER.name}
+                            {user ? user.name : "Loading..."}
                         </p>
-                        <p className="text-[#4a4a4a] text-[11px]">@{CURRENT_USER.username}</p>
+                        <p className="text-[#4a4a4a] text-[11px]">{user ? `@${user.username}` : "..."}</p>
                     </div>
                 </div>
                 <button
@@ -77,12 +108,12 @@ export default function Sidebar() {
                     Rooms
                 </p>
                 <div className="flex flex-col gap-px">
-                    {ROOMS.map((room) => {
-                        const isRoomActive = pathname === `/me/room/${room.id}`;
+                    {rooms.map((room) => {
+                        const isRoomActive = pathname === `/me/room/${room._id}`;
                         return (
                             <Link
-                                key={room.id}
-                                href={`/me/room/${room.id}`}
+                                key={room._id}
+                                href={`/me/room/${room._id}`}
                                 className={`flex items-start gap-2.5 px-3 py-2 rounded-md group ${isRoomActive
                                     ? "bg-[#1c1c1c]"
                                     : "hover:bg-[#161616]"
@@ -95,11 +126,11 @@ export default function Sidebar() {
                                             {room.name}
                                         </p>
                                         <span className="text-[#3a3a3a] text-[10px] shrink-0 ml-2">
-                                            {room.timeAgo}
+                                            {new Date(room.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                                         </span>
                                     </div>
                                     <p className="text-[#3a3a3a] text-[11px] truncate">
-                                        {room.lastMessage}
+                                        {room.lastMessage || "No messages yet"}
                                     </p>
                                 </div>
                                 {room.unread && (

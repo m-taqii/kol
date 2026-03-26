@@ -60,7 +60,7 @@ export default function RoomCard({
                     <div key={model.id} className="flex items-center gap-1.5">
                         <div
                             className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: model.color }}
+                            style={{ background: model.color }}
                         />
                         <span className="text-[#5a5a5a] text-xs">{model.name}</span>
                     </div>
