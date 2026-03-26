@@ -52,6 +52,8 @@ HARD RULES (never violate):
 2. If the last 3 messages are ALL from AIs → should_respond: false. Let humans breathe.
 3. If should_respond is false → responding_models must be [].
 4. The model that sent the immediately previous message CANNOT be selected again.
+5. EXTREME SELECTIVITY: Default to EXACTLY ONE model for simple questions, tasks, or factual queries. Only involve multiple models if the user EXPLICITLY asks for a debate, multiple opinions, or if the topic is highly subjective and warrants a panel discussion.
+6. If the user mentions a model by name, that model MUST be included in the response.
 
 ---
 

@@ -1,8 +1,8 @@
 import { ChatOpenAI } from "@langchain/openai";
-import { SystemMessage, HumanMessage, AIMessage, BaseMessage } from "@langchain/core/messages";
+import { SystemMessage, HumanMessage, AIMessage, BaseMessage, ToolMessage } from "@langchain/core/messages";
+import { searchTool } from "../tools/searchTool.js";
+import { urlTool } from "../tools/urlTool.js";
 
-// ── Model Registry ────────────────────────────────────────
-// Each model gets its own LLM instance and personality profile
 
 interface ModelConfig {
     llmModel: string;
@@ -41,6 +41,13 @@ function getModelConfig(modelId: string): ModelConfig {
             baseURL: "https://api.groq.com/openai/v1",
             temperature: 0.75,
             personality: `You are Qwen — the critical thinker and devil's advocate. You naturally question assumptions, spot weak reasoning, and play the "have you considered..." role. You're not contrarian for the sake of it — you genuinely want to stress-test ideas so the group arrives at stronger conclusions. You're sharp but respectful. When everyone agrees too quickly, you're the one who slows things down.`,
+        },
+        gemini: {
+            llmModel: "gemini-2.5-flash",
+            apiKey: process.env.GEMINI_API_KEY || "",
+            baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+            temperature: 0.7,
+            personality: `You are Gemini — the generalist and synthesizer. You are great at processing large amounts of context, summarizing different viewpoints, and bringing broad world knowledge to the conversation. When others are diving too deep into the weeds, you help zoom out and see the big picture. You are balanced and objective.`,
         },
         longcat: {
             llmModel: "LongCat-Flash-Chat",
@@ -127,15 +134,20 @@ YOUR POSITION: ${positionGuidance}
 
 RULES FOR NATURAL GROUP CHAT:
 - Talk like a real person in a group chat — concise, direct, natural
+- EXTREME BREVITY: Keep your responses ridiculously short, 1-3 sentences max. Never write essays or long paragraphs unless the user explicitly asks for detailed explanations, essays, or complex code.
 - NO greetings, NO sign-offs, NO "Great question!", NO "As an AI..."
 - If you agree with a previous response, say so briefly and add your unique angle — don't just rephrase
 - If you disagree, say it directly: "I'd push back on that because..."
 - Build on others' ideas: "Adding to what [model] said..."
 - It's okay to be opinionated — that's why you're in the group
-- Keep it under 120 words unless the topic genuinely needs depth
-- Use markdown for code, lists, or structured content when it helps clarity
-- You can use casual language, contractions, even humor when appropriate
-- Reference previous messages naturally, like a human would in a group chat`;
+- Use markdown for code, lists, or structured content only when it crucially helps clarity
+- You can use casual language, contractions, even context-appropriate humor
+- Reference previous messages naturally, like a human would in a group chat
+
+- You have access to tools:
+  - tavily_search_results_json: Search the web for real-time information.
+  - read_url: Read the full content of a specific URL.
+  Use them only when you need fresh data or deep context you don't already have.`;
 }
 
 // ── Message Mapper ────────────────────────────────────────
@@ -180,18 +192,49 @@ async function modelNode(state: any) {
                 responses.filter(r => !r.error), // pass only successful previous responses
             );
 
-            const response = await llm.invoke([
+            const tools = [searchTool, urlTool];
+            const llmWithTools = llm.bindTools(tools);
+
+            let messages_to_send: BaseMessage[] = [
                 new SystemMessage(systemPrompt),
                 ...conversationHistory
-            ]);
+            ];
 
-            let rawContent = response.content as string;
-            // Remove <think>...</think> tags and all their inner contents (common in deepseek/qwen-qwq models)
-            const cleanedContent = rawContent.replace(/<think>[\s\S]*?<\/think>\n*/g, "").trim();
+            let response = await llmWithTools.invoke(messages_to_send);
+
+            // Handle tool calls (simple loop for 1 round of tool usage)
+            if (response.tool_calls && response.tool_calls.length > 0) {
+                messages_to_send.push(response);
+
+                for (const toolCall of response.tool_calls) {
+                    const tool = tools.find(t => t.name === toolCall.name);
+                    if (tool) {
+                        const toolResult = await tool.invoke(toolCall.args);
+                        messages_to_send.push(new ToolMessage({
+                            tool_call_id: toolCall.id!,
+                            content: typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult)
+                        }));
+                    }
+                }
+
+                // Get final response after tool results
+                response = await llmWithTools.invoke(messages_to_send);
+            }
+
+            let rawContent = (response.content as string) || "";
+            
+            // 1. Remove <think>...</think> tags and all their inner contents (common in deepseek/qwen-qwq models)
+            let cleanedContent = rawContent.replace(/<think>[\s\S]*?<\/think>\n*/g, "").trim();
+            
+            // 2. Remove raw <function=xyz>...</function> strings that Groq's Llama models mistakenly leak into standard text
+            cleanedContent = cleanedContent.replace(/<function=[^>]+>[\s\S]*?<\/function>\n*/g, "").trim();
+            
+            // 3. Remove raw <tool_call>...</tool_call> strings (another common leakage format)
+            cleanedContent = cleanedContent.replace(/<tool_call>[\s\S]*?<\/tool_call>\n*/g, "").trim();
 
             responses.push({
                 modelId,
-                content: cleanedContent,
+                content: cleanedContent || "Researching...",
                 error: false
             });
         } catch (error) {

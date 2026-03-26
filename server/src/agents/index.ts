@@ -5,6 +5,7 @@ import { gateNode } from "./nodes/gate";
 import { START, END } from "@langchain/langgraph";
 
 interface RoomMessage {
+    id: string
     senderName: string
     senderType: "human" | "ai"
     modelId?: string
@@ -33,19 +34,18 @@ export const GraphState = Annotation.Root({
     respondingModels: Annotation<string[]>(),
     modelResponses: Annotation<ModelResponse[]>(),
     messageCount: Annotation<number>(),
+    summarizedMessageIds: Annotation<string[]>(),
 });
 
 function shouldContinue(state: any) {
     if (state.gateDecision?.should_respond && state.respondingModels?.length > 0) {
         return "models";
     }
-    return END;
+    return shouldSummarize(state);
 }
 
 function shouldSummarize(state: any) {
-    // Summarize every 10 messages to keep memory fresh
-    const count = state.messageCount || 0;
-    if (count > 0 && count % 10 === 0) {
+    if (state.messages && state.messages.length > 20) {
         return "summarizer";
     }
     return END;

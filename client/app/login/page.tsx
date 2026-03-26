@@ -2,9 +2,10 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import axios from 'axios'
+import { useRouter } from 'next/navigation'
 
 const page = () => {
-
+    const router = useRouter();
     const [formData, setformData] = useState({
         email: "",
         password: "",
@@ -24,6 +25,7 @@ const page = () => {
         }).then((res) => {
             console.log(res.data);
             setSuccess("Login successful");
+            router.push("/me");
         }).catch((err) => {
             console.log(err);
             setError(err.response.data.message);

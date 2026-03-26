@@ -38,7 +38,9 @@ FORMAT RULES:
 This summary is silently injected as context into future AI responses. Accuracy and conciseness are everything.`;
 
 async function summarizerNode(state: any) {
-    const formattedMessages = state.messages?.map((m: any) => {
+    const messagesToSummarize = (state.messages || []).slice(0, 20);
+    
+    const formattedMessages = messagesToSummarize.map((m: any) => {
         const speaker = m.senderType === 'ai' ? `[AI:${m.modelId || m.senderName}]` : `[Human:${m.senderName}]`;
         return `${speaker}: ${m.content}`;
     }).join('\n') || "No messages.";
@@ -53,7 +55,11 @@ ${formattedMessages}`;
         new SystemMessage(SUMMARIZER_SYSTEM_PROMPT),
         new HumanMessage(userPrompt),
     ]);
-    return { roomMemory: response.content as string };
+    
+    return { 
+        roomMemory: response.content as string,
+        summarizedMessageIds: messagesToSummarize.map((m: any) => m.id)
+    };
 }
 
 export default summarizerNode;
