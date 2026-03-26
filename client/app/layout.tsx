@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Kōl",
+  title: "Kōl - Where Intelligence Gathers",
   description: "AI-powered group chat",
 };
 

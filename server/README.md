@@ -10,7 +10,7 @@ The backend is built using a modern, fast stack designed for high concurrency an
 
 *   **Runtime:** Node.js (via Bun for speed during development)
 *   **Web Framework:** Express.js `v5` (handles Auth and REST endpoints)
-*   **Real-time Layer:** Socket.io (planned for bidirectional messaging)
+*   **Real-time Layer:** Socket.io (bidirectional messaging, typing indicators, AI active states)
 *   **Database:** MongoDB & Mongoose
 *   **AI Orchestration:** LangGraph (TypeScript) & `@langchain/core`
 
@@ -29,15 +29,19 @@ server/
     │       └── summarizer.ts # Continuous memory compression
     ├── controllers/      # API Controllers (REST layer)
     │   ├── user.controller.ts
-    │   └── room.controller.ts
+    │   ├── room.controller.ts
+    │   └── friend.controller.ts
     ├── lib/              # Core utilities (e.g., db.ts)
-    ├── middlewares/      # Express middlewares (e.g., auth.middleware.ts)
+    ├── middlewares/      # Express middlewares
     ├── models/           # Mongoose schemas
     │   ├── user.model.ts
-    │   └── room.model.ts
+    │   ├── room.model.ts
+    │   ├── message.model.ts
+    │   └── invite.model.ts
     └── routes/           # Express router definitions
         ├── user.route.ts
-        └── room.route.ts
+        ├── room.route.ts
+        └── friend.route.ts
 ```
 
 ---
@@ -56,16 +60,21 @@ The core differentiation of Kōl is the AI orchestration layer located in `src/a
 - **Rules:** The Gate enforces limits (max 3 consecutive AI messages, alternating model turns, preventing AI monologues).
 
 ### 2. The Board (`models.ts`)
-When the Gate approves a response, control passes to the model execution layer. It currently supports dynamically routing to:
+When the Gate approves a response, control passes to the model execution layer. Models execute sequentially, meaning each model reads the previous AI's response before replying, creating a true "board meeting" effect. Supported models:
 - 📐 **GPT:** `gpt-oss-120b`
 - 🎯 **Llama:** `llama-3.3-70b-versatile`
 - 🔗 **Kimi:** `moonshotai/kimi-k2-instruct-0905`
 - ⚔️ **Qwen:** `qwen/qwen3-32b`
 - 🐈 **Longcat:** `LongCat-Flash-Chat`
+- 🌟 **Gemini:** `gemini-2.5-flash`
+
+Models have access to **Agentic Tools** during execution:
+- `tavily_search_results_json`: Real-time web search for facts.
+- `read_url`: Jina AI-powered URL content scraping.
 
 ### 3. The Summarizer (`summarizer.ts`)
 - **Model:** `llama-3.1-8b-instant` running on Groq.
-- **Function:** Compresses conversation history into a third-person rolling summary. This memory is injected into future AI responses to ensure context scales without token bloat.
+- **Function:** Compresses conversation history into a third-person rolling summary every **10 messages**. This memory is injected into future AI responses to ensure context scales without token bloat.
 
 ---
 
@@ -183,6 +192,95 @@ Creates a new chat room and adds the specified members and AI models.
 - `401 Unauthorized`: Missing or invalid token
 - `500 Server Error`: Failed to create room
 
+### `POST /room/:roomId/invite`
+Generates a unique, short invite code for the room. Only the room owner can call this.
+
+**Success Response (201 Created):**
+```json
+{
+  "inviteUrl": "http://localhost:3000/invite/a1b2c3d4",
+  "code": "a1b2c3d4"
+}
+```
+
+### `GET /room/invite/:code`
+Allows a user to join a room via an invite code. Returns the `roomId` on success.
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "roomId": "60d5ecb8b392cb3e4c8b4569"
+}
+```
+
+### `DELETE /room/:roomId`
+Deletes the room and all associated invites. Only the owner can delete.
+
+**Success Response (200 OK):**
+```json
+{ "success": true }
+```
+
+### `POST /room/:roomId/leave`
+Allows a member to leave a room. Owners cannot leave their own rooms.
+
+**Success Response (200 OK):**
+```json
+{ "success": true }
+```
+
+### `DELETE /room/:roomId/member/:userId`
+Removes a specific human member from the room. Only the room owner can perform this.
+
+### `POST /room/:roomId/ai/add`
+Adds a new AI board member to the room.
+**Body:** `{ "aiModelId": "gemini" }`
+
+---
+
+## 👥 Friends API
+Social endpoints for connecting with other users.
+
+### `GET /friends/list`
+Lists the current user's friends with their online status.
+
+**Success Response (200 OK):**
+```json
+[
+  {
+    "_id": "60d5ecb8b392cb3e4c8b4567",
+    "name": "Sarah Connor",
+    "username": "sarah_c",
+    "online": true
+  }
+]
+```
+
+### `GET /friends/search?q=query`
+Search for users by name or username to add as friends.
+
+**Success Response (200 OK):**
+```json
+[
+  {
+    "_id": "60d5ecb8b392cb3e4c8b4568",
+    "name": "John Connor",
+    "username": "john_c",
+    "online": false
+  }
+]
+```
+
+### `POST /friends/add`
+Instantly adds a user as a friend (reciprocal).
+**Body:** `{ "username": "target_user" }`
+
+**Success Response (200 OK):**
+```json
+{ "success": true }
+```
+
 ---
 
 ## 🚀 Setup & Development
@@ -197,9 +295,11 @@ MONGODB_URI=mongodb://localhost:27017/kol
 JWT_SECRET=your_super_secret_string
 FRONTEND_URL=http://localhost:3000
 
-# LLM Providers
+# LLM Providers & Tools
 GROQ_API_KEY=your_groq_api_key
 LONGCAT_API_KEY=your_longcat_api_key
+GEMINI_API_KEY=your_gemini_api_key
+TAVILY_API_KEY=your_tavily_api_key
 ```
 
 ### 2. Install Dependencies

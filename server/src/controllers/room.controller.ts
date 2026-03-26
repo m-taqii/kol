@@ -4,6 +4,8 @@ import mongoose from "mongoose";
 import type { Response } from "express";
 import type { AuthRequest } from "../middlewares/auth.middleware";
 import User from "../models/user.model";
+import Invite from "../models/invite.model";
+import crypto from "crypto";
 
 async function createRoom(req: AuthRequest, res: Response) {
     try {
@@ -160,4 +162,135 @@ async function getMessages(req: AuthRequest, res: Response) {
     }
 }
 
-export { createRoom, getRooms, getRoom, getMessages };
+async function generateInvite(req: AuthRequest, res: Response) {
+    try {
+        const { roomId } = req.params;
+        const room = await Room.findById(roomId);
+        if (!room) return res.status(404).json({ error: "Room not found" });
+
+        if (room.owner.toString() !== req.userId)
+            return res.status(403).json({ error: "Only the owner can invite" });
+
+        const code = crypto.randomBytes(4).toString("hex");
+
+        await Invite.create({ room: room._id, code });
+
+        const inviteUrl = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/invite/${code}`;
+        res.status(201).json({ inviteUrl, code });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to create invite" });
+    }
+}
+
+async function joinViaInvite(req: AuthRequest, res: Response) {
+    try {
+        const { code } = req.params;
+        const invite = await Invite.findOne({ code }).populate("room");
+        if (!invite) return res.status(404).json({ error: "Invalid invite" });
+
+        const room = invite.room as any;
+        if (!room.members.includes(req.userId)) {
+            room.members.push(req.userId);
+            await room.save();
+        }
+
+        res.status(200).json({ success: true, roomId: room._id });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to join via invite" });
+    }
+}
+
+async function leaveRoom(req: AuthRequest, res: Response) {
+    try {
+        const { roomId } = req.params;
+        const room = await Room.findById(roomId);
+        if (!room) return res.status(404).json({ error: "Room not found" });
+
+        if (room.owner.toString() === req.userId)
+            return res.status(400).json({ error: "Owner cannot leave; delete or transfer ownership instead" });
+
+        room.members = room.members.filter((m: any) => m.toString() !== req.userId);
+        await room.save();
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to leave room" });
+    }
+}
+
+async function deleteRoom(req: AuthRequest, res: Response) {
+    try {
+        const { roomId } = req.params;
+        const room = await Room.findById(roomId);
+        if (!room) return res.status(404).json({ error: "Room not found" });
+
+        if (room.owner.toString() !== req.userId)
+            return res.status(403).json({ error: "Only owner can delete room" });
+
+        await Room.deleteOne({ _id: roomId });
+        await Invite.deleteMany({ room: roomId });
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to delete room" });
+    }
+}
+
+async function addAiToRoom(req: AuthRequest, res: Response) {
+    try {
+        const { roomId } = req.params;
+        const { aiModelId } = req.body;
+        
+        const room = await Room.findById(roomId);
+        if (!room) return res.status(404).json({ error: "Room not found" });
+        if (room.owner.toString() !== req.userId) return res.status(403).json({ error: "Only owner can modify models" });
+
+        if (!room.aiMembers.includes(aiModelId)) {
+            room.aiMembers.push(aiModelId);
+            await room.save();
+        }
+        res.status(200).json(room);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to add AI" });
+    }
+}
+
+async function removeMember(req: AuthRequest, res: Response) {
+    try {
+        const { roomId, userId } = req.params;
+        const room = await Room.findById(roomId);
+        if (!room) return res.status(404).json({ error: "Room not found" });
+
+        if (room.owner.toString() !== req.userId)
+            return res.status(403).json({ error: "Only the owner can remove members" });
+
+        if (room.owner.toString() === userId)
+            return res.status(400).json({ error: "Owner cannot be removed; delete the room instead" });
+
+        room.members = room.members.filter((m: any) => m.toString() !== userId);
+        await room.save();
+
+        res.status(200).json({ success: true, members: room.members });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to remove member" });
+    }
+}
+
+export { 
+    createRoom, 
+    getRooms, 
+    getRoom, 
+    getMessages, 
+    generateInvite, 
+    joinViaInvite, 
+    leaveRoom, 
+    deleteRoom,
+    addAiToRoom,
+    removeMember
+};

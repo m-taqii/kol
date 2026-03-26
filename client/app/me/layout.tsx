@@ -21,8 +21,8 @@ export default function MeLayout({ children }: { children: React.ReactNode }) {
                         className="absolute inset-0 bg-black/60"
                         onClick={() => setMobileOpen(false)}
                     />
-                    <div className="relative z-10">
-                        <Sidebar />
+                    <div className="relative z-10 w-[260px] h-full flex">
+                        <Sidebar onClose={() => setMobileOpen(false)} />
                     </div>
                 </div>
             )}

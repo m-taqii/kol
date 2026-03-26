@@ -9,7 +9,7 @@
 
 ---
 
-**GPT** · **Llama** · **Kimi** · **Qwen** · **LongCat**
+**GPT** · **Llama** · **Kimi** · **Qwen** · **Gemini** · **LongCat**
 
 All in one room. All with opinions. All knowing when to shut up.
 
@@ -28,169 +28,100 @@ You open a room. Your friends are there. So are AI models — each with a **dist
 
 ---
 
-## 🧠 The Gate — AIs That Know When to Shut Up
+## 🧠 "The Brain" — LangGraph Orchestration
 
-The hardest part of putting AI in a group chat isn't making it talk — it's making it **shut up**.
+Kōl uses a custom-built **LangGraph** state machine to manage the lifecycle of a conversation. It's not just "send message, get response." It's a structured deliberation.
 
-Every time a human sends a message, a fast `llama-3.3-70b-versatile` on Groq reads the recent conversation and makes a structured decision:
+### 1. The Gate (`gate.ts`)
+The harder part of putting AI in a group chat isn't making it talk — it's making it **shut up**. Every human message is first processed by the Gate (Llama 3.3 70B on Groq).
+- It decides **who should respond** (maximum 2 models per round).
+- It identifies if a message is social chatter, a direct question, or a request for a brainstorm.
+- It enforces a **"Let Humans Breathe"** rule (max 3 consecutive AI turns).
 
-```json
-{
-  "should_respond": true,
-  "reason": "An open question was asked about go-to-market strategy",
-  "responding_models": ["gpt", "kimi"]
-}
-```
+### 2. The Board (`models.ts`)
+When the Gate signals a response (should_respond: true), control passes to the model execution node. Models speak **sequentially**. 
+- Each model reads the previous human message *and* any AI responses from the current round before replying.
+- This creates professional continuity — AIs can agree, disagree, or build upon each other's ideas naturally.
+- Output cleaning: Automatically handles `<think>` tag stripping for reasoning models.
 
-```
-Human: "hey did you guys see the match last night?"
-Human: "yeah that last goal was insane"
-Human: "we should go watch the next one together"
-
-  ↳ Gate Decision: Humans chatting casually → AIs stay silent ✓
-```
-
-```
-Human: "what's the actual GDP growth rate of India this quarter?"
-Human: "I think it's around 7%"
-
-  ↳ Gate Decision: Factual question with uncertain answer → Analyst responds ✓
-```
-
-### ⚙️ The Hard Rules
-
-| Rule | Why |
-|---|---|
-| A Llama model on **Groq** reads the last 5-6 messages before anyone speaks | Lightning-fast, near-zero cost gate |
-| AIs only respond to open questions, debatable claims, or correctable facts | No noise. Only signal. |
-| Responses arrive with **natural staggered delays** | Feels like real people typing |
-| **Max 3 consecutive AI messages**, then full stop | Humans always drive the conversation |
-| **Max 2 models per round** — if only one adds value, only one speaks | No echo chamber |
-| No AI responds twice in a row without a human message in between | Prevents AI monologues |
-
----
-
-## 🎭 The Board
-
-Every AI in the room has an identity. A voice. A color.
-
-| ID | Model | Provider |
-|---|---|---|
-| `gpt` | GPT-OSS 120B | Groq |
-| `llama` | Llama 3.3 70B Versatile | Groq |
-| `kimi` | Kimi K2 Instruct | Groq |
-| `qwen` | Qwen3 32B | Groq |
-| `longcat` | LongCat Flash Chat | LongCat API |
-| `gemini` | Gemini 2.5 Flash | Google Gemini API |
-
-All models run through the OpenAI-compatible `ChatOpenAI` interface from LangChain, making it straightforward to swap or add new models. Each model is displayed by **friendly name + version badge** with a unique **color identity** in chat.
-
----
-
-## 🧵 Context & Memory
-
-Rooms don't bloat. They remember.
-
-A background `llama-3.1-8b-instant` model compresses conversation history into a rolling third-person summary. This keeps the context window flat regardless of how long a room has been active — old messages get compressed, recent messages stay verbatim.
-
-```
-Every 20 messages
-  └─→ Background job compresses history into a rolling summary
-       └─→ Using a cheap Groq model (near-zero cost)
-            └─→ Every AI call receives:
-                  ├── Compressed long-term memory
-                  └── Last 10-15 messages verbatim
-```
-
-- **Room Memory** — A clean summary of everything discussed, readable anytime
-- **Switching cost builds naturally** — The longer your room lives, the harder it is to leave
-- **Input tokens stay flat** — Regardless of room age, cost doesn't scale
-
----
-
-## 🔀 Orchestration
-
-The entire AI pipeline is wired as a **LangGraph** state graph:
-
-```
-START → Gate → Model → END
-```
-
-The graph manages state (`model`, `prompt`, `response`) across nodes using LangGraph's `Annotation` system, making it easy to add conditional edges, parallel branches, or new nodes as the product evolves.
+### 3. The Summarizer (`summarizer.ts`)
+Rooms don't suffer from context bloat. Every **10 messages**, a background summarizer (Llama 3.1 8B) compresses the history into a rolling narrative memory. This memory is injected back into the board's psyche, ensuring they remember the core decisions without wasting tokens.
 
 ---
 
 ## 🛠️ The Tool Layer
 
-Your board doesn't just talk. It **acts**.
+Your advisors aren't stuck in a vacuum. They can access the world to ground their opinions in reality:
+- **Tavily Web Search:** Real-time factual lookups for news, data, and current events.
+- **Jina AI Reader:** Deep scraping of articles and documentation for detailed analysis.
+- **Agentic Logic:** Tools are dynamically invoked by board members when they need more information.
 
-```
-@Kimi search for the latest Series A rounds in AI startups
-@GPT draft a cold email to this investor
-@Qwen break down this technical paper
-@LongCat summarize this article
-```
+---
 
-> Tools are **only triggered on direct `@mention`** — never automatically.<br/>
-> This turns Kōl from a chat app into a **command center**.
+## ⚡ Real-Time Experience (Socket.io)
+
+Kōl feels alive because it *is* real-time.
+- **Bi-directional Messaging:** Messages flow instantly across the room using Socket.io namespaces and rooms.
+- **Natural Pacing:** AI responses arrive with staggered, realistic typing delays (3ms per character) to match the human cadence.
+- **Active Feedback:** Transparent "AI is thinking..." and "X is typing..." indicators for both humans and AIs.
+- **Socket Auth:** Handshake-level JWT validation for secure real-time connections.
+
+---
+
+## 👥 Social & Room Governance
+
+Collaboration is at the heart of Kōl.
+- **Invite Links:** Generate secure, URL-safe codes (e.g., `/invite/a1b2c3d4`) to bring friends into your rooms.
+- **Join via Invite Flow:** Dedicated landing page handles onboarding for new users while joining the room.
+- **Board Seats:** Room owners can customize their board by adding or removing AI models on the fly.
+- **Member Control:** Owners can manage the human roster, including removing members or deleting the room.
+- **Instant Connections:** Search users by name or username and add them as friends (instant reciprocal networking).
 
 ---
 
 ## 🏗️ Tech Stack
 
-| Layer | Technology |
-|---|---|
-| **Frontend** | Next.js 16 · React 19 · Tailwind CSS 4 · Lucide Icons |
-| **Backend** | Express 5 · TypeScript · Bun runtime |
-| **AI Orchestration** | LangGraph · LangChain · Groq · LongCat |
-| **Database** | MongoDB · Mongoose 9 |
-| **Auth** | JWT · bcrypt · httpOnly cookies |
+### Frontend
+- **Framework:** Next.js 16 (App Router)
+- **Styling:** Tailwind CSS 4
+- **Components:** React 19, Lucide Icons
+- **Features:** React Markdown, Axios, Socket.io-client
+
+### Backend
+- **Framework:** Express 5
+- **Runtime:** Bun
+- **AI Orchestration:** LangGraph, LangChain (@langchain/openai, @langchain/core)
+- **Database:** MongoDB & Mongoose 9
+- **Real-time:** Socket.io 4
 
 ---
 
 ## 📁 Project Structure
 
-```
+```text
 kol/
-├── client/                     # Next.js 16 frontend
-│   └── app/
-│       ├── page.tsx            # Landing page
-│       ├── login/page.tsx      # Sign in screen
-│       ├── signup/page.tsx     # Account creation screen
-│       └── me/                 # Authenticated dashboard app
-│           ├── layout.tsx      # Global sidebar navigation
-│           ├── page.tsx        # Dashboard home (rooms list)
-│           └── room/[id]/      # Single room chat interface
+├── client/                     # Next.js 16 (App Router)
+│   ├── app/                    # Pages & Auth Routes
+│   │   ├── (auth)/             # Login & Signup flows
+│   │   ├── me/                 # Authenticated Dashboard
+│   │   │   ├── friends/        # Social Management
+│   │   │   ├── settings/       # User Preferences
+│   │   │   └── room/[id]/      # Core Chat Experience
+│   │   └── invite/[code]/      # Social Onboarding landing page
+│   ├── components/             # Reusable UI (Modals, RoomCards, sidebar)
+│   ├── hooks/                  # Socket.io & Authentication hooks
+│   └── data/                   # Global configuration & constants
 │
-├── server/                     # Express backend
-│   ├── server.ts               # Entry point
+├── server/                     # Express (Bun)
+│   ├── server.ts               # Server Entry with Socket.io initialization
+│   ├── socket.ts               # Core Socket event handling & AI pipeline execution
 │   └── src/
-│       ├── app.ts              # Express config & route mounting
-│       ├── lib/                # Utilities and DB connection
-│       │   └── db.ts
-│       ├── models/             # Mongoose schemas
-│       │   ├── user.model.ts   # User schema with bcrypt hashing
-│       │   ├── room.model.ts   # Room schema (members, AI, memory)
-│       │   └── message.model.ts # Message history collection
-│       ├── controllers/        # Request handlers
-│       │   ├── user.controller.ts
-│       │   └── room.controller.ts
-│       ├── routes/             # Express routers
-│       │   ├── user.route.ts
-│       │   └── room.route.ts
-│       └── middlewares/        # Express middlewares
-│           └── auth.middleware.ts # JWT protection layer
-│
-│       └── agents/             # LangGraph AI pipeline
-│           ├── index.ts        # Graph definition & compilation
-│           ├── nodes/          # Graph components
-│           │   ├── gate.ts     # Conversation gating logic
-│           │   ├── models.ts   # Multi-model routing
-│           │   └── summarizer.ts  # Memory compression
-│           └── tools/          # Agentic tools
-│               ├── searchTool.ts  # Web search (Tavily)
-│               └── urlTool.ts     # URL reading (Jina AI)
-│
+│       ├── agents/             # 🧠 The Brain: LangGraph implementation
+│       │   ├── nodes/          # Gate, Models, Summarizer logic
+│       │   └── tools/          # Web Search & URL Tools
+│       ├── controllers/        # REST Route Request Handlers
+│       ├── models/             # Mongoose schemas (User, Room, Message, Invite)
+│       └── routes/             # Authentication, Room, and Friend API endpoints
 └── README.md
 ```
 
@@ -198,103 +129,100 @@ kol/
 
 ## ✅ Current State
 
-### What's Built
+### 🖥️ Frontend
+- **Auth Flow:** High-end dark theme login/signup with username validation and 401 redirect logic.
+- **Dashboard:** Multi-page app structure with persistent global sidebar.
+- **Rooms:** Full chat interface with board member rosters, infinite scroll message history, and thinking indicators.
+- **Governance:** `RoomSettingsModal` for owner-level control, add AI dropdowns, and invite link generation.
+- **Social:** Friends list fetching and user search.
 
-**🖥️ Frontend**
-- Dark-themed auth flow — login and signup screens with username validation
-- Dashboard app (`/me`) — multi-page layout with a global sidebar and subpages for Rooms, Friends, and Settings
-- Room interface (`/me/room/[id]`) — dedicated chat view with AI board roster and mock message feed
-- Mock data layer demonstrating room state and the AI board interaction pattern
-- Responsive chat input with `@mention` placeholder support
-
-**⚡ Backend**
-- User authentication — register and login with bcrypt password hashing, JWT token generation, httpOnly cookie sessions
-- Duplicate user detection on registration
-- Mongoose User model with username regex validation
-- Room Management — Create and manage rooms with multiple human and AI members
-- Authentication Middleware — Verified routes for protected resources
-
-**🧠 AI Pipeline**
-- Gate node — Llama 3.3 70B on Groq with structured output (Zod schema validation)
-- Model node — dynamic routing to 5 different LLMs across 2 providers
-- Summarizer node — Llama 3.1 8B for rolling conversation compression
-- LangGraph state graph compiled and ready for integration
+### ⚡ Backend
+- **Authentication:** JWT + bcryptjs + httpOnly cross-origin cookie sessions.
+- **Database:** Persistent schemas for Users (with online status), Rooms (with AI members & memory), and Messages.
+- **Real-time:** Socket.io server with JWT handshake auth and automatic room joining.
+- **AI Pipeline:** Full LangGraph state machine with automatic summarization every 10 messages.
 
 ---
 
 ## 🗺️ Roadmap
 
 ### Phase 1 — Foundation `✅ Completed`
-- [x] Project scaffolding (Next.js + Express + MongoDB)
-- [x] Auth UI (Login & Signup screens)
-- [x] Auth API with JWT + httpOnly cookies + duplicate detection
-- [x] User model with bcrypt hashing & username validation
-- [x] MongoDB connection wiring
-- [x] Connect frontend auth forms to backend API
+- [x] Next.js + Express + MongoDB scaffolding
+- [x] Auth UI & API (JWT + httpOnly cookies)
+- [x] MongoDB wiring & User model
 
 ### Phase 2 — The Brain `✅ Completed`
-- [x] Gate system — Llama on Groq with structured output
-- [x] Multi-model routing (6 models across 3 providers)
-- [x] Sequential model reasoning (AIs read previous AI answers)
-- [x] LangGraph state graph wired into message flow
-- [x] Staggered, realistic typing indicator response delays
-- [x] Consecutive message limiting enforcement at runtime
+- [x] LangGraph State Machine
+- [x] Sequential reasoning & Model node
+- [x] 6 Models across 3 providers (Groq, LongCat, Gemini)
 
-### Phase 3 — Rooms & Real-time `✅ Completed`
-- [x] Room list and chat interface UI layout
-- [x] Room creation UI
-- [x] Room model and CRUD API
-- [x] Socket.io integration for real-time messaging and typing events
-- [x] Message persistence in database
+### Phase 3 — Real-time Chat `✅ Completed`
+- [x] Socket.io integration & Room namespaces
+- [x] Persistence of all messages (Human & AI)
+- [x] AI Thinking & Typing indicators
 
-### Phase 4 — Memory `✅ Completed`
-- [x] Summarizer node (Llama 3.1 8B on Groq)
-- [x] Integration of roll-up summarization into room lifecycle (every 10 messages)
-- [x] Long-term room memory storage
-- [ ] Room Memory viewer for users
+### Phase 4 — Social & Governance `✅ Completed`
+- [x] Invite code system & Landing page
+- [x] Friend search and reciprocal addition
+- [x] Room settings (Remove members, Add AI, Delete)
 
-### Phase 5 — Tool Layer `🟢 In Progress`
-- [x] Tool execution logic inside the Model node
-- [x] `tavily_search_results_json` core capability
-- [x] `read_url` (Jina AI) core capability
-- [ ] `@mention` detection and routing from UI
-
-### Phase 6 — Scale `🟣 Vision`
-- [ ] Credit system and usage tracking
-- [ ] Premium model integration
-- [ ] React Native mobile app
+### Phase 5 — Tool Layer `✅ Completed`
+- [x] Tavily Search implementation
+- [x] Jina AI URL Reader implementation
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Setup & Development
 
-### Prerequisites
-
+### 1. Prerequisites
 - **Bun** (recommended) or Node.js ≥ 18
 - **MongoDB** — local instance or Atlas cluster
-- **Groq API key** — [console.groq.com](https://console.groq.com)
 
-### Setup
+### 2. Configure Environment Variables
+
+#### **Backend (`server/.env`)**
+```bash
+PORT=8080
+MONGODB_URI=mongodb://localhost:27017/kol
+JWT_SECRET=your_super_secret_string
+FRONTEND_URL=http://localhost:3000
+
+# LLM Providers & Tools
+GROQ_API_KEY=your_groq_api_key
+LONGCAT_API_KEY=your_longcat_api_key
+GEMINI_API_KEY=your_gemini_api_key
+TAVILY_API_KEY=your_tavily_api_key
+```
+
+#### **Frontend (`client/.env.local`)**
+```bash
+NEXT_PUBLIC_BACKEND_URL=http://localhost:8080
+NEXT_PUBLIC_FRONTEND_URL=http://localhost:3000
+```
+
+### 3. Installation
 
 ```bash
 # Clone
 git clone <repo-url>
 cd kol
 
-# Server
-cd server
-bun install
-# Create .env with: PORT, MONGODB_URI, JWT_SECRET, GROQ_API_KEY, LONGCAT_API_KEY, FRONTEND_URL
-bun run dev
-
-# Client (separate terminal)
-cd client
-bun install
-# Create .env with: NEXT_PUBLIC_BACKEND_URL
-bun run dev
+# Install dependencies (using Bun for speed)
+cd server && bun install
+cd ../client && bun install
 ```
 
-The client runs on `localhost:3000`, the server on the port specified in `.env` (default `8080`).
+### 4. Running the App
+
+In two separate terminals:
+
+```bash
+# Start Backend
+cd server && bun run dev
+
+# Start Frontend
+cd client && bun run dev
+```
 
 ---
 

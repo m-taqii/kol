@@ -6,6 +6,9 @@ interface IUser extends Document {
     email: string;
     username: string;
     password: string;
+    friends: mongoose.Types.ObjectId[];
+    friendRequests: mongoose.Types.ObjectId[]; // incoming pending requests
+    online: boolean;
     comparePassword(password: string): Promise<boolean>;
 }
 
@@ -19,9 +22,12 @@ const userSchema = new mongoose.Schema<IUser>({
         match: /^[a-z0-9_]{3,20}$/ // 3-20 chars, letters/numbers/underscore only
     },
     password: { type: String, required: true, select: false },
+    friends: [{ type: mongoose.Schema.Types.ObjectId, ref: "User", default: [] }],
+    friendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User", default: [] }],
+    online: { type: Boolean, default: false },
 });
 
-userSchema.pre("save", async function () {
+userSchema.pre("save", async function (this: IUser) {
     if (!this.isModified("password")) return;
     this.password = await bcrypt.hash(this.password, 10);
 });

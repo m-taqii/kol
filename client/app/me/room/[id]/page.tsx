@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
-import { Send, Bot, ArrowLeft, UserPlus, Cpu, Zap, Loader2 } from "lucide-react";
+import { useState, useEffect, use, useRef, useCallback } from "react";
+import { Send, Bot, ArrowLeft, UserPlus, Cpu, Zap, Loader2, Check, Settings, Info, Copy } from "lucide-react";
 import Link from "next/link";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useSocket, ChatMessage as SocketChatMessage } from "../../../../hooks/useSocket";
 import { AI_MODELS } from "../../data/mock";
+import RoomSettingsModal from "../../../../components/RoomSettingsModal";
+import NotificationModal from "../../../../components/NotificationModal";
 
 interface RoomPageProps {
     params: Promise<{ id: string }>;
@@ -16,8 +18,23 @@ interface RoomPageProps {
 export default function RoomPage({ params }: RoomPageProps) {
     const { id } = use(params);
     const [input, setInput] = useState("");
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [room, setRoom] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [showAiDropdown, setShowAiDropdown] = useState(false);
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [notification, setNotification] = useState<{
+        isOpen: boolean;
+        type: "success" | "error" | "warning" | "info";
+        title: string;
+        message: string;
+    }>({
+        isOpen: false,
+        type: "info",
+        title: "",
+        message: ""
+    });
 
     const {
         messages,
@@ -34,17 +51,15 @@ export default function RoomPage({ params }: RoomPageProps) {
     useEffect(() => {
         const fetchRoomData = async () => {
             try {
-                const [roomRes, msgRes] = await Promise.all([
-                    axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/room/${id}`, {
-                        withCredentials: true
-                    }),
-                    axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/room/${id}/messages`, {
-                        withCredentials: true
-                    })
+                const [roomRes, msgRes, userRes] = await Promise.all([
+                    axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/room/${id}`, { withCredentials: true }),
+                    axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/room/${id}/messages`, { withCredentials: true }),
+                    axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/me`, { withCredentials: true })
                 ]);
 
                 setRoom(roomRes.data);
                 addMessages(msgRes.data.messages);
+                setCurrentUser(userRes.data);
             } catch (error) {
                 console.error("Failed to fetch room or messages", error);
             } finally {
@@ -55,6 +70,48 @@ export default function RoomPage({ params }: RoomPageProps) {
         fetchRoomData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
+
+    const handleInvite = async () => {
+        try {
+            const res = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/room/${id}/invite`, {}, { withCredentials: true });
+            const inviteUrl = res.data.inviteUrl;
+            await navigator.clipboard.writeText(inviteUrl);
+            setNotification({
+                isOpen: true,
+                type: "success",
+                title: "Invite Link Copied!",
+                message: "A secure, short-lived invite link has been copied to your clipboard. Share it with your collaborators to bring them into the board."
+            });
+        } catch (e) {
+            setNotification({
+                isOpen: true,
+                type: "error",
+                title: "Failed to Generate Invite",
+                message: "We encountered a problem while creating your invite link. Please try again or contact support if the issue persists."
+            });
+        }
+    };
+
+    const handleAddAi = async (modelId: string) => {
+        try {
+            const res = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/room/${id}/ai/add`, { aiModelId: modelId }, { withCredentials: true });
+            setRoom(res.data);
+            setShowAiDropdown(false);
+            setNotification({
+                isOpen: true,
+                type: "success",
+                title: "AI Injected Successfully",
+                message: `${modelId} has joined the room and is ready to contribute to your brainstorm. Mention it with @ to start a direct dialogue.`
+            });
+        } catch (e) {
+            setNotification({
+                isOpen: true,
+                type: "error",
+                title: "AI Addition Failed",
+                message: `We couldn't add the AI model to this room right now. This can happen if the model is currently hitting rate limits or if there's a connectivity issue.`
+            });
+        }
+    };
 
     if (loading) {
         return (
@@ -73,21 +130,26 @@ export default function RoomPage({ params }: RoomPageProps) {
     }
 
     const uniqueAiModels = room.aiMembers || [];
+    const isOwner = currentUser?._id === room.owner?._id || currentUser?._id === room.owner;
 
     const handleSendMessage = () => {
         if (!input.trim() || !isJoined) return;
         sendMessage(input);
         setInput("");
+        // Reset textarea height
+        if (textareaRef.current) {
+            textareaRef.current.style.height = "44px";
+        }
     };
 
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full bg-[#0c0c0c]">
             {/* Room Header */}
-            <div className="shrink-0 px-6 py-4 border-b border-[#2a2a2a] bg-[#111111] flex items-center justify-between">
+            <div className="shrink-0 px-6 py-4 border-b border-[#2a2a2a] bg-[#111111] flex items-center justify-between shadow-sm lg:shadow-none">
                 <div className="flex items-center gap-3">
                     <Link
                         href="/me"
-                        className="text-[#5a5a5a] hover:text-[#ededed] lg:hidden"
+                        className="p-2 -ml-2 text-[#5a5a5a] hover:text-[#ededed] lg:hidden transition-all rounded-lg hover:bg-[#1c1c1c]"
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </Link>
@@ -95,33 +157,87 @@ export default function RoomPage({ params }: RoomPageProps) {
                         <h1 className="text-[#ededed] font-semibold text-[16px]">
                             {room.name}
                         </h1>
-                        <p className="text-[#5a5a5a] text-[12px]">
+                        <p className="text-[#5a5a5a] text-[12px] flex items-center gap-2">
+                             <div className={`w-1.5 h-1.5 rounded-full ${isConnected && isJoined ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-red-500 animate-pulse"}`} />
                             {room.members?.length || 0} members · {uniqueAiModels.length} AIs
                         </p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    {/* Status Indicator */}
-                    <div className="flex items-center gap-2 mr-4">
-                        <div className={`w-2 h-2 rounded-full ${isConnected && isJoined ? "bg-green-500" : "bg-red-500"}`} />
-                        <span className="text-xs text-[#5a5a5a] hidden sm:inline">
-                            {isConnected && isJoined ? "Connected" : "Disconnected"}
-                        </span>
-                    </div>
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1c1c] border border-[#2a2a2a] text-[#5a5a5a] hover:text-[#ededed] text-xs transition-colors">
-                        <UserPlus className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Invite</span>
-                    </button>
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1c1c] border border-[#2a2a2a] text-[#c4a882] text-xs transition-colors">
-                        <Cpu className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Add AI</span>
+                    {isOwner && (
+                        <>
+                            <button 
+                                onClick={handleInvite}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1c1c] border border-[#2a2a2a] text-[#5a5a5a] hover:text-[#ededed] hover:border-[#3a3a3a] text-xs transition-all font-medium"
+                            >
+                                <UserPlus className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Invite</span>
+                            </button>
+                            
+                            <div className="relative">
+                                <button 
+                                    onClick={() => setShowAiDropdown(!showAiDropdown)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1c1c] border border-[#2a2a2a] text-[#c4a882] text-xs transition-all font-medium hover:border-[#c4a882]/50 hover:bg-[#c4a882]/5"
+                                >
+                                    <Cpu className="w-3.5 h-3.5" />
+                                    <span className="hidden sm:inline">Add AI</span>
+                                </button>
+                                
+                                {showAiDropdown && (
+                                    <>
+                                        <div className="fixed inset-0 z-40" onClick={() => setShowAiDropdown(false)} />
+                                        <div className="absolute right-0 mt-2 w-48 bg-[#161616] border border-[#2a2a2a] rounded-xl shadow-2xl z-50 py-2 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                            <p className="px-3 py-2 text-[10px] font-bold text-[#5a5a5a] uppercase tracking-widest">Available Models</p>
+                                            {AI_MODELS.map(model => (
+                                                <button
+                                                    key={model.id}
+                                                    onClick={() => handleAddAi(model.id)}
+                                                    disabled={room.aiMembers.includes(model.id)}
+                                                    className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-[13px] hover:bg-[#1c1c1c] transition-colors ${room.aiMembers.includes(model.id) ? "opacity-30 grayscale cursor-not-allowed" : "text-[#ededed]"}`}
+                                                >
+                                                    <div className="w-2 h-2 rounded-full" style={{ background: model.color }} />
+                                                    {model.name}
+                                                    {room.aiMembers.includes(model.id) && <Check className="w-3.5 h-3.5 ml-auto text-[#5a5a5a]" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </>
+                    )}
+
+                    <button 
+                        onClick={() => setShowSettingsModal(true)}
+                        className="p-2 text-[#5a5a5a] hover:text-[#ededed] transition-all rounded-lg hover:bg-[#1c1c1c] ml-1"
+                        title="Room Board Settings"
+                    >
+                        <Settings className="w-5 h-5" />
                     </button>
                 </div>
             </div>
 
+            {/* Modals */}
+            <RoomSettingsModal
+                isOpen={showSettingsModal}
+                onClose={() => setShowSettingsModal(false)}
+                room={room}
+                currentUser={currentUser}
+                onRoomUpdated={(upd) => setRoom(upd)}
+            />
+
+            <NotificationModal
+                isOpen={notification.isOpen}
+                onClose={() => setNotification({ ...notification, isOpen: false })}
+                type={notification.type}
+                title={notification.title}
+                message={notification.message}
+                actionLabel="Awesome"
+            />
+
             {/* AI Models Bar */}
             {uniqueAiModels.length > 0 && (
-                <div className="shrink-0 px-6 py-2.5 border-b border-[#2a2a2a] bg-[#0c0c0c] flex items-center gap-4 overflow-x-auto no-scrollbar">
+                <div className="shrink-0 px-6 py-2 border-b border-[#2a2a2a] bg-[#0c0c0c] flex items-center gap-4 overflow-x-auto no-scrollbar scroll-smooth shadow-inner">
                     {uniqueAiModels.map((modelName: string) => {
                         const modelData = AI_MODELS.find(m => m.id === modelName.toLowerCase() || m.name === modelName);
                         return (
@@ -231,15 +347,21 @@ export default function RoomPage({ params }: RoomPageProps) {
                 <div className="max-w-3xl mx-auto flex items-end gap-3">
                     <div className="flex-1 bg-[#1c1c1c] border border-[#2a2a2a] rounded-lg flex items-end focus-within:border-[#c4a882]/50 transition-colors">
                         <textarea
+                            ref={textareaRef}
                             value={input}
                             onChange={(e) => {
                                 setInput(e.target.value);
-                                startTyping(); // Emit typing socket event natively
+                                startTyping();
+                                // Auto-grow
+                                const el = e.target;
+                                el.style.height = "44px";
+                                el.style.height = Math.min(el.scrollHeight, 160) + "px";
                             }}
-                            placeholder={isConnected && isJoined ? "Message the room... (use @ to mention an AI)" : "Connecting to socket..."}
+                            placeholder={isConnected && isJoined ? "Message the room... (Shift+Enter for new line)" : "Connecting..."}
                             disabled={!isConnected || !isJoined}
-                            className="flex-1 bg-transparent px-4 py-3 text-[14px] text-[#ededed] placeholder:text-[#5a5a5a] outline-none resize-none max-h-[120px] min-h-[44px] disabled:opacity-50"
+                            className="flex-1 bg-transparent px-4 py-3 text-[14px] text-[#ededed] placeholder:text-[#5a5a5a] outline-none resize-none disabled:opacity-50 no-scrollbar"
                             rows={1}
+                            style={{ minHeight: "44px", maxHeight: "160px", overflowY: "auto" }}
                             onKeyDown={(e) => {
                                 if (e.key === "Enter" && !e.shiftKey) {
                                     e.preventDefault();
