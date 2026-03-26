@@ -1,4 +1,5 @@
 import mongoose, { Document } from 'mongoose'
+import crypto from 'crypto'
 
 interface IRoom extends Document {
     name: string;
@@ -41,9 +42,10 @@ const roomSchema = new mongoose.Schema<IRoom>({
     },
     inviteCode: {
         type: String,
-        unique: true
+        unique: true,
+        default: () => crypto.randomBytes(6).toString('hex')
     }
-},{
+}, {
     timestamps: true
 })
 
