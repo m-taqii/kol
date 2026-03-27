@@ -25,7 +25,11 @@ interface Room {
     unread?: boolean;
 }
 
-export default function Sidebar() {
+interface SidebarProps {
+    onClose?: () => void;
+}
+
+export default function Sidebar({ onClose }: SidebarProps) {
     const [rooms, setRooms] = useState<Room[]>([]);
     const [user, setUser] = useState<{ name: string; username: string } | null>(null);
 
@@ -64,7 +68,10 @@ export default function Sidebar() {
                     </div>
                 </div>
                 <button
-                    onClick={() => setIsCreateModalOpen(true)}
+                    onClick={() => {
+                        setIsCreateModalOpen(true);
+                        onClose?.();
+                    }}
                     className="block w-full bg-[#ededed] text-[#0c0c0c] font-semibold text-[13px] py-2 rounded-lg text-center hover:bg-white transition-colors"
                 >
                     + New Room
@@ -86,6 +93,7 @@ export default function Sidebar() {
                             <Link
                                 key={item.href}
                                 href={item.href}
+                                onClick={onClose}
                                 className={`flex items-center gap-2.5 px-3 py-[7px] rounded-md text-[13px] ${isActive
                                     ? "bg-[#1c1c1c] text-[#ededed] font-medium"
                                     : "text-[#5a5a5a] hover:text-[#999] hover:bg-[#161616]"
@@ -114,6 +122,7 @@ export default function Sidebar() {
                             <Link
                                 key={room._id}
                                 href={`/me/room/${room._id}`}
+                                onClick={onClose}
                                 className={`flex items-start gap-2.5 px-3 py-2 rounded-md group ${isRoomActive
                                     ? "bg-[#1c1c1c]"
                                     : "hover:bg-[#161616]"
@@ -147,7 +156,10 @@ export default function Sidebar() {
 
             {/* Logout */}
             <div className="px-3 py-3">
-                <button className="flex items-center gap-2.5 px-3 py-[7px] text-[#3a3a3a] hover:text-[#888] text-[13px] w-full rounded-md hover:bg-[#161616]">
+                <button 
+                    onClick={onClose}
+                    className="flex items-center gap-2.5 px-3 py-[7px] text-[#3a3a3a] hover:text-[#888] text-[13px] w-full rounded-md hover:bg-[#161616]"
+                >
                     <LogOut className="w-[15px] h-[15px]" />
                     Log out
                 </button>

@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
-import { X, Check, Users, Cpu, Hash } from "lucide-react";
-import { FRIENDS, AI_MODELS } from "../app/me/data/mock";
+import React, { useState, useEffect } from "react";
+import { X, Check, Users, Cpu, Hash, Loader2 } from "lucide-react";
+import { AI_MODELS } from "../app/me/data/mock";
 import axios from "axios";
 
 interface CreateRoomModalProps {
@@ -14,26 +14,39 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
   const [roomName, setRoomName] = useState("");
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
+  const [friends, setFriends] = useState<any[]>([]);
+  const [loadingFriends, setLoadingFriends] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+        setLoadingFriends(true);
+        axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/friends/list`, { withCredentials: true })
+            .then(res => setFriends(res.data))
+            .catch(e => console.error(e))
+            .finally(() => setLoadingFriends(false));
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const handleCreateRoom = () => {
     axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/room/create`, {
       name: roomName,
-      members: selectedFriends,
-      aiMembers: selectedModels,
+      members: selectedFriends, // array of usernames
+      aiMembers: selectedModels, // array of model IDs
     }, {
       withCredentials: true,
     }).then(() => {
       onClose();
+      window.location.reload(); // Refresh to show new room
     }).catch((error) => {
       console.error(error);
     });
   }
 
-  const toggleFriend = (id: string) => {
+  const toggleFriend = (username: string) => {
     setSelectedFriends((prev) =>
-      prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]
+      prev.includes(username) ? prev.filter((u) => u !== username) : [...prev, username]
     );
   };
 
@@ -132,32 +145,40 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
               <span className="text-[10px] text-[#3a3a3a] font-medium">{selectedFriends.length} selected</span>
             </div>
             <div className="space-y-2">
-              {FRIENDS.map((friend) => (
-                <button
-                  key={friend.id}
-                  onClick={() => toggleFriend(friend.id)}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${selectedFriends.includes(friend.id)
-                    ? "bg-[#c4a882]/5 border-[#c4a882]"
-                    : "bg-[#0c0c0c] border-[#2a2a2a] hover:border-[#3a3a3a]"
-                    }`}
-                >
-                  <div className="w-8 h-8 rounded-full bg-[#1c1c1c] flex items-center justify-center text-[11px] font-bold text-[#ededed] group-hover:bg-[#2a2a2a]">
-                    {friend.name.split(" ").map(n => n[0]).join("")}
-                  </div>
-                  <div className="flex-1 text-left">
-                    <p className={`text-[13px] font-medium ${selectedFriends.includes(friend.id) ? "text-[#ededed]" : "text-[#888]"}`}>{friend.name}</p>
-                    <p className="text-[#3a3a3a] text-[11px]">@{friend.username}</p>
-                  </div>
-                  <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${selectedFriends.includes(friend.id)
-                    ? "bg-[#c4a882] border-[#c4a882]"
-                    : "border-[#2a2a2a]"
-                    }`}>
-                    {selectedFriends.includes(friend.id) && (
-                      <Check className="w-3 h-3 text-[#111111]" />
-                    )}
-                  </div>
-                </button>
-              ))}
+              {loadingFriends ? (
+                <div className="flex justify-center py-6">
+                    <Loader2 className="w-6 h-6 animate-spin text-[#5a5a5a]" />
+                </div>
+              ) : friends.length === 0 ? (
+                <p className="text-xs text-[#3a3a3a] text-center py-4">No friends found. Add some in the Friends tab!</p>
+              ) : (
+                friends.map((friend) => (
+                    <button
+                      key={friend._id}
+                      onClick={() => toggleFriend(friend.username)}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${selectedFriends.includes(friend.username)
+                        ? "bg-[#c4a882]/5 border-[#c4a882]"
+                        : "bg-[#0c0c0c] border-[#2a2a2a] hover:border-[#3a3a3a]"
+                        }`}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#1c1c1c] flex items-center justify-center text-[11px] font-bold text-[#ededed] group-hover:bg-[#2a2a2a]">
+                        {friend.name.split(" ").map((n: string) => n[0]).join("")}
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className={`text-[13px] font-medium ${selectedFriends.includes(friend.username) ? "text-[#ededed]" : "text-[#888]"}`}>{friend.name}</p>
+                        <p className="text-[#3a3a3a] text-[11px]">@{friend.username}</p>
+                      </div>
+                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${selectedFriends.includes(friend.username)
+                        ? "bg-[#c4a882] border-[#c4a882]"
+                        : "border-[#2a2a2a]"
+                        }`}>
+                        {selectedFriends.includes(friend.username) && (
+                          <Check className="w-3 h-3 text-[#111111]" />
+                        )}
+                      </div>
+                    </button>
+                  ))
+              )}
             </div>
           </section>
         </div>
