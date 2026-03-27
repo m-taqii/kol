@@ -12,6 +12,7 @@ export default function DashboardPage() {
     const [rooms, setRooms] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [messageCount, setMessageCount] = useState<number>(0)
 
     const fetchRooms = async () => {
         try {
@@ -19,6 +20,12 @@ export default function DashboardPage() {
                 withCredentials: true
             });
             setRooms(res.data);
+            let roomArray = res.data;
+            let count = 0;
+            for (const room of roomArray) {
+                count += room.messageCount || 0;
+            }
+            setMessageCount(count)
         } catch (error) {
             console.error("Failed to fetch rooms:", error);
         } finally {
@@ -37,7 +44,7 @@ export default function DashboardPage() {
                 <h1 className="text-[28px] font-bold text-[#ededed]">
                     Your Rooms
                 </h1>
-                <button 
+                <button
                     onClick={() => setIsModalOpen(true)}
                     className="flex items-center gap-2 bg-[#ededed] text-[#0c0c0c] font-bold text-[13px] px-4 py-2 rounded-xl hover:bg-white transition-all shadow-lg shadow-white/5"
                 >
@@ -60,7 +67,7 @@ export default function DashboardPage() {
             <div className="mb-8">
                 <StatsRow
                     totalRooms={rooms.length}
-                    messagesSent={630} // Hardcoded for now
+                    messagesSent={messageCount} // Hardcoded for now
                     friends={MOCK_FRIENDS.length}
                 />
             </div>
@@ -98,7 +105,7 @@ export default function DashboardPage() {
                     <p className="text-[#888888] text-sm mb-6 max-w-[200px]">
                         No rooms yet. Create your first room to get started.
                     </p>
-                    <button 
+                    <button
                         onClick={() => setIsModalOpen(true)}
                         className="bg-[#ededed] text-[#0c0c0c] font-bold text-sm px-8 py-3 rounded-2xl hover:bg-white transition-all"
                     >
@@ -107,12 +114,12 @@ export default function DashboardPage() {
                 </div>
             )}
 
-            <CreateRoomModal 
-                isOpen={isModalOpen} 
+            <CreateRoomModal
+                isOpen={isModalOpen}
                 onClose={() => {
                     setIsModalOpen(false);
                     fetchRooms(); // Refresh rooms on close
-                }} 
+                }}
             />
         </div>
     );

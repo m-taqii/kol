@@ -5,6 +5,7 @@ interface IUser extends Document {
     name: string;
     email: string;
     username: string;
+    profilePicture: string;
     password: string;
     friends: mongoose.Types.ObjectId[];
     friendRequests: mongoose.Types.ObjectId[]; // incoming pending requests
@@ -21,6 +22,7 @@ const userSchema = new mongoose.Schema<IUser>({
         unique: true,
         match: /^[a-z0-9_]{3,20}$/ // 3-20 chars, letters/numbers/underscore only
     },
+    profilePicture: { type: String, default: "" },
     password: { type: String, required: true, select: false },
     friends: [{ type: mongoose.Schema.Types.ObjectId, ref: "User", default: [] }],
     friendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User", default: [] }],

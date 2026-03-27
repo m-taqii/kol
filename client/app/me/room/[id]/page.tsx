@@ -24,6 +24,11 @@ export default function RoomPage({ params }: RoomPageProps) {
     const [showAiDropdown, setShowAiDropdown] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
+    const [hasMore, setHasMore] = useState(false);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [notification, setNotification] = useState<{
         isOpen: boolean;
         type: "success" | "error" | "warning" | "info";
@@ -59,7 +64,12 @@ export default function RoomPage({ params }: RoomPageProps) {
 
                 setRoom(roomRes.data);
                 addMessages(msgRes.data.messages);
+                setHasMore(msgRes.data.hasMore);
+                setNextCursor(msgRes.data.nextCursor);
                 setCurrentUser(userRes.data);
+                
+                // Initial scroll to bottom
+                setTimeout(() => scrollToBottom(true), 100);
             } catch (error) {
                 console.error("Failed to fetch room or messages", error);
             } finally {
@@ -70,6 +80,44 @@ export default function RoomPage({ params }: RoomPageProps) {
         fetchRoomData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
+
+    const scrollToBottom = (instant = false) => {
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: instant ? "auto" : "smooth" });
+        }
+    };
+
+    // Auto-scroll on new messages
+    useEffect(() => {
+        if (messages.length > 0) {
+            const container = scrollContainerRef.current;
+            if (container) {
+                const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 200;
+                if (isNearBottom || messages.length <= 30) {
+                    scrollToBottom();
+                }
+            }
+        }
+    }, [messages]);
+
+    const handleLoadMore = async () => {
+        if (loadingMore || !nextCursor) return;
+        setLoadingMore(true);
+        try {
+            const res = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/room/${id}/messages`, {
+                params: { cursor: nextCursor },
+                withCredentials: true
+            });
+            addMessages(res.data.messages);
+            setHasMore(res.data.hasMore);
+            setNextCursor(res.data.nextCursor);
+        } catch (error) {
+            console.error("Load more failed", error);
+        } finally {
+            setLoadingMore(false);
+        }
+    };
+
 
     const handleInvite = async () => {
         try {
@@ -254,8 +302,22 @@ export default function RoomPage({ params }: RoomPageProps) {
             )}
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-6" id="messages-container">
+            <div 
+                ref={scrollContainerRef}
+                className="flex-1 overflow-y-auto no-scrollbar px-6 py-6" id="messages-container"
+            >
                 <div className="max-w-3xl mx-auto flex flex-col gap-5 w-full">
+                    {hasMore && (
+                        <div className="flex justify-center pb-4">
+                            <button 
+                                onClick={handleLoadMore}
+                                disabled={loadingMore}
+                                className="text-[12px] text-[#5a5a5a] hover:text-[#ededed] transition-all bg-[#1c1c1c] px-4 py-1.5 rounded-full border border-[#2a2a2a] disabled:opacity-50"
+                            >
+                                {loadingMore ? "Loading history..." : "Load earlier messages"}
+                            </button>
+                        </div>
+                    )}
                     {messages.length === 0 ? (
                         <p className="text-[#5a5a5a] text-center text-sm py-10">Be the first to say something...</p>
                     ) : (
@@ -340,6 +402,8 @@ export default function RoomPage({ params }: RoomPageProps) {
                         )}
                     </div>
                 </div>
+                {/* Anchor for scrolling */}
+                <div ref={messagesEndRef} className="h-0" />
             </div>
 
             {/* Input Form */}

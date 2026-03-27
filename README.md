@@ -5,28 +5,37 @@
 ### Your Personal Board of Advisors
 
 *A group chat where humans and AI models share the same room.*<br/>
-*Not a chatbot. Not a tool. A room where intelligence gathers.*
+*Not a chatbot. Not a tool. A council where intelligence gathered.*
 
 ---
 
-**GPT** · **Llama** · **Kimi** · **Qwen** · **Gemini** · **LongCat**
+**GPT** · **Llama** · **Gemini** · **Kimi** · **Qwen** · **LongCat**
 
-All in one room. All with opinions. All knowing when to shut up.
+All in one room. All with perspectives. All synchronized.
 
 ---
 
 </div>
 
-## 💡 The Idea
+## 💡 The Vision
 
 You have a decision to make. A debate to settle. A topic to explore.
 
-You open a room. Your friends are there. So are AI models — each with a **distinct personality**, each with a **unique perspective**, and each smart enough to know **when to stay silent**.
+You open a room. Your teammates are there. So are AI models — each with a **distinct gradient identity**, each with a **unique perspective**, and each orchestrated within a **Unified Multi-Mind Thread**.
 
-> **Kōl isn't "AI chat."**<br/>
-> It's your personal board of advisors — always available, never annoying, and they actually disagree with each other.
+> **Kōl isn't just "AI chat."**<br/>
+> It's a high-fidelity workspace designed for professional deliberation. It's your personal board of advisors — always available, deeply contextual, and designed to challenge your assumptions.
 
 ---
+
+## ✨ The Visual Experience
+
+Kōl is built with an obsession for motion and clarity.
+
+- **GSAP-Driven Motion:** Smooth, staggered reveal animations and fluid state transitions (using `gsap` and `@gsap/react`).
+- **Glassmorphic UI:** Modern dark-mode aesthetic featuring deep obsidian backgrounds (`#0c0c0c`), Kōl gold accents (`#c4a882`), and sophisticated backdrop blurs.
+- **Adaptive Council UI:** A responsive, real-time board interface where AI members have brand-aligned gradients and distinct "Council Header" message bubbles.
+- **Walkthrough Architecture:** A dedicated [How It Works](client/app/how-it-works/page.tsx) page visualizes the complex orchestration between the Gate, the Board, and Living Memory.
 
 ## 🧠 "The Brain" — LangGraph Orchestration
 
@@ -82,17 +91,18 @@ Collaboration is at the heart of Kōl.
 ## 🏗️ Tech Stack
 
 ### Frontend
-- **Framework:** Next.js 16 (App Router)
-- **Styling:** Tailwind CSS 4
-- **Components:** React 19, Lucide Icons
-- **Features:** React Markdown, Axios, Socket.io-client
+- **Framework:** Next.js 15+ (App Router)
+- **Animation:** GSAP, @gsap/react
+- **Styling:** Tailwind CSS 4+
+- **Icons:** Lucide-react
+- **Components:** React 19, Markdown-to-JSX, React Markdown (remark-gfm)
 
 ### Backend
-- **Framework:** Express 5
-- **Runtime:** Bun
-- **AI Orchestration:** LangGraph, LangChain (@langchain/openai, @langchain/core)
-- **Database:** MongoDB & Mongoose 9
-- **Real-time:** Socket.io 4
+- **Framework:** Express 5 (Alpha)
+- **Runtime:** Bun 1.1+
+- **AI Orchestration:** LangGraph, LangChain
+- **Database:** MongoDB & Mongoose 8+
+- **Real-time:** Socket.io 4+
 
 ---
 
@@ -107,8 +117,10 @@ kol/
 │   │   │   ├── friends/        # Social Management
 │   │   │   ├── settings/       # User Preferences
 │   │   │   └── room/[id]/      # Core Chat Experience
-│   │   └── invite/[code]/      # Social Onboarding landing page
-│   ├── components/             # Reusable UI (Modals, RoomCards, sidebar)
+│   │   ├── how-it-works/       # Technical walkthrough page
+│   │   ├── about/              # Mission & Vision
+│   │   └── invite/[code]/      # Social Onboarding
+│   ├── components/             # Reusable UI (Modals, RoomCards, Navbar)
 │   ├── hooks/                  # Socket.io & Authentication hooks
 │   └── data/                   # Global configuration & constants
 │

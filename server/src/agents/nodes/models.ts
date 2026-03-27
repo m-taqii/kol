@@ -69,8 +69,6 @@ function createModelLLM(config: ModelConfig): ChatOpenAI {
         apiKey: config.apiKey,
         temperature: config.temperature,
         topP: 1,
-        frequencyPenalty: 0,
-        presencePenalty: 0,
         configuration: {
             baseURL: config.baseURL,
         },
@@ -114,14 +112,14 @@ RULES:
     } else if (speakingPosition === 0) {
         positionGuidance = "You're speaking FIRST in this round. Set the foundation — give your core perspective on the topic. Others will build on or challenge what you say.";
     } else if (speakingPosition === totalSpeakers - 1) {
-        positionGuidance = "You're speaking LAST in this round. You've read what the other AIs said. Your job: synthesize, challenge, or add what's missing. Don't repeat what's been said — build on it, disagree with it, or tie it together.";
+        positionGuidance = "You're speaking LAST in this round. You've read what the other AIs said. Your job: synthesize, challenge, or add what's missing. STRICT REDUNDANCY BAN: If you agree 100% with the previous AI and have nothing unique to add, just say 'I agree with [Model]' and nothing else. NEVER re-explain what they already explained.";
     } else {
-        positionGuidance = "You're speaking in the MIDDLE of this round. You've read the previous AI response(s). Build on them, offer a different angle, or respectfully push back. Don't echo — add value.";
+        positionGuidance = "You're speaking in the MIDDLE of this round. You've read the previous AI response. DO NOT REPEAT THEM. Build on it, offer a different angle, or pivot to a new edge-case. If you echo the previous model word-for-word, you have failed.";
     }
 
     let previousResponsesBlock = "";
     if (previousResponses.length > 0) {
-        previousResponsesBlock = `\n\nOTHER AI RESPONSES THIS ROUND (they spoke before you — READ these before responding):\n${previousResponses.map(r => `[${r.modelId}]: ${r.content}`).join('\n\n')}`;
+        previousResponsesBlock = `\n\nCONTRIBUTIONS FROM OTHER MODELS THIS ROUND:\n${previousResponses.map(r => `${r.modelId}: ${r.content}`).join('\n\n')}`;
     }
 
     return `${personality}
@@ -133,16 +131,17 @@ ${previousResponsesBlock}
 YOUR POSITION: ${positionGuidance}
 
 RULES FOR NATURAL GROUP CHAT:
-- Talk like a real person in a group chat — concise, direct, natural
+- Talk like a real person in a group chat — concise, direct, natural.
+- **NO ECHOING**: If someone else already gave the answer, do not repeat the facts. Either add a new insight, apply it to a different context, or move the conversation forward.
 - EXTREME BREVITY: Keep your responses ridiculously short, 1-3 sentences max. Never write essays or long paragraphs unless the user explicitly asks for detailed explanations, essays, or complex code.
 - NO greetings, NO sign-offs, NO "Great question!", NO "As an AI..."
-- If you agree with a previous response, say so briefly and add your unique angle — don't just rephrase
-- If you disagree, say it directly: "I'd push back on that because..."
-- Build on others' ideas: "Adding to what [model] said..."
-- It's okay to be opinionated — that's why you're in the group
-- Use markdown for code, lists, or structured content only when it crucially helps clarity
-- You can use casual language, contractions, even context-appropriate humor
-- Reference previous messages naturally, like a human would in a group chat
+- It's okay to be opinionated — that's why you're in the group.
+- Use markdown for code, lists, or structured content only when it crucially helps clarity.
+- **CRITICAL**: If you find yourself saying the same thing as a previous model, STOP and change your angle. Value uniqueness over thoroughness.
+
+- **CRITICAL**: DO NOT prefix your response with your name, "AI:", "[AI: name]", or any other label. Just start your response with your actual message.
+- **CRITICAL**: ONLY speak for yourself. Never simulate or generate text for other models or users.
+- **CRITICAL**: Your output must be a SINGLE response from YOUR perspective. STOP immediately after finishing your point.
 
 - You have access to tools:
   - tavily_search_results_json: Search the web for real-time information.
@@ -150,18 +149,21 @@ RULES FOR NATURAL GROUP CHAT:
   Use them only when you need fresh data or deep context you don't already have.`;
 }
 
-// ── Message Mapper ────────────────────────────────────────
+// Message Mapper
 function mapMessages(messages: any[]): BaseMessage[] {
     return messages.map((m) => {
         const name = m.senderType === "ai" ? (m.modelId || m.senderName) : m.senderName;
+        // Use a standard name: content format for clarity
+        const formattedContent = `${name}: ${m.content}`;
+        
         if (m.senderType === "ai") {
-            return new AIMessage({ content: m.content, name });
+            return new AIMessage({ content: formattedContent, name });
         }
-        return new HumanMessage({ content: m.content, name });
+        return new HumanMessage({ content: formattedContent, name });
     });
 }
 
-// ── Model Node ────────────────────────────────────────────
+// Model Node
 // Models respond SEQUENTIALLY so each can see what came before
 
 async function modelNode(state: any) {
@@ -173,9 +175,10 @@ async function modelNode(state: any) {
 
     const conversationHistory = mapMessages(messages);
     const isOnlyModel = modelsInRoom?.length === 1;
+    // Local state for the speak-cycle to ensure each model sees previous ones as proper AI messages
+    let currentConversation = [...conversationHistory];
     const responses: { modelId: string; content: string; error: boolean }[] = [];
 
-    // Sequential execution: each model sees previous models' responses
     for (let i = 0; i < respondingModels.length; i++) {
         const modelId = respondingModels[i];
         try {
@@ -189,7 +192,7 @@ async function modelNode(state: any) {
                 isOnlyModel,
                 i,
                 respondingModels.length,
-                responses.filter(r => !r.error), // pass only successful previous responses
+                responses.filter(r => !r.error),
             );
 
             const tools = [searchTool, urlTool];
@@ -197,7 +200,7 @@ async function modelNode(state: any) {
 
             let messages_to_send: BaseMessage[] = [
                 new SystemMessage(systemPrompt),
-                ...conversationHistory
+                ...currentConversation
             ];
 
             let response = await llmWithTools.invoke(messages_to_send);
@@ -223,20 +226,35 @@ async function modelNode(state: any) {
 
             let rawContent = (response.content as string) || "";
             
-            // 1. Remove <think>...</think> tags and all their inner contents (common in deepseek/qwen-qwq models)
+            // 1. Clean contents...
             let cleanedContent = rawContent.replace(/<think>[\s\S]*?<\/think>\n*/g, "").trim();
-            
-            // 2. Remove raw <function=xyz>...</function> strings that Groq's Llama models mistakenly leak into standard text
             cleanedContent = cleanedContent.replace(/<function=[^>]+>[\s\S]*?<\/function>\n*/g, "").trim();
-            
-            // 3. Remove raw <tool_call>...</tool_call> strings (another common leakage format)
             cleanedContent = cleanedContent.replace(/<tool_call>[\s\S]*?<\/tool_call>\n*/g, "").trim();
+            cleanedContent = cleanedContent.replace(/^\[?AI:\s*[^\]]+\]?:\s*/i, "");
+            cleanedContent = cleanedContent.replace(/^(gpt|llama|kimi|qwen|gemini|longcat):\s*/i, "");
+            
+            if (cleanedContent.includes('\n[AI:') || cleanedContent.includes('\nAI:')) {
+                const parts = cleanedContent.split(/\n\[?AI:/);
+                cleanedContent = (parts[0] || "").trim();
+            }
+
+            // SUCCESS: only append if model actually said something substantive
+            if (!cleanedContent) {
+                console.log(`Skipping silent response from ${modelId}`);
+                continue; 
+            }
 
             responses.push({
                 modelId,
-                content: cleanedContent || "Researching...",
+                content: cleanedContent,
                 error: false
             });
+
+            // Update local conversation history for subsequent models in the same round
+            currentConversation.push(new AIMessage({ 
+                content: `${modelId}: ${cleanedContent}`, 
+                name: modelId 
+            }));
         } catch (error) {
             console.error(`Error invoking model ${modelId}:`, error);
             responses.push({

@@ -21,7 +21,7 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
     if (isOpen) {
         setLoadingFriends(true);
         axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/friends/list`, { withCredentials: true })
-            .then(res => setFriends(res.data))
+            .then(res => setFriends(res.data.friends || []))
             .catch(e => console.error(e))
             .finally(() => setLoadingFriends(false));
     }

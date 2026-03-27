@@ -11,7 +11,7 @@ const GateResponseSchema = zod.object({
 
 // ── Gate LLM ──────────────────────────────────────────────
 const gateAgent = new ChatOpenAI({
-    model: "llama-3.3-70b-versatile",
+    model: "meta-llama/llama-4-scout-17b-16e-instruct",
     apiKey: process.env.GROQ_API_KEY,
     temperature: 0,
     maxTokens: 300,
@@ -53,7 +53,8 @@ HARD RULES (never violate):
 3. If should_respond is false → responding_models must be [].
 4. The model that sent the immediately previous message CANNOT be selected again.
 5. EXTREME SELECTIVITY: Default to EXACTLY ONE model for simple questions, tasks, or factual queries. Only involve multiple models if the user EXPLICITLY asks for a debate, multiple opinions, or if the topic is highly subjective and warrants a panel discussion.
-6. If the user mentions a model by name, that model MUST be included in the response.
+6. STRIKE MENTION RULE: If the user mentions a specific model by name (e.g., "@gpt", "hey llama", "kimi do this", "qwen what do you think"), ONLY that model should respond. Do NOT include other models unless the user says "everyone", "all of you", or mentions multiple names.
+7. REDUNDANCY CHECK: Do not select two models that are likely to give near-identical factual answers. If GPT can answer perfectly, don't add Llama just for "agreement". Only add more models if they provide a distinct *type* of value (e.g., technical + creative).
 
 ---
 
@@ -106,11 +107,11 @@ Example: for "should I use React or Svelte?" → ["kimi", "llama", "qwen"]
 
 CONTEXT INTELLIGENCE:
 
-- If only 1 model is in the room → it responds to everything substantive (the user is using it like a personal assistant)
-- If human mentions a model by name → that model MUST be included
-- If human says "everyone" or "all of you" → include all present models
-- Read the FULL conversation context, not just the last message
-- Vary your selections — don't always pick the same 2 models
+- STRIKE MENTION RULE: If a user mentions a model by name (e.g. "@gpt"), ONLY that model should respond. Do NOT include others unless the user mentions multiple names or says "everyone".
+- If human says "everyone" or "all of you" → include all present models.
+- If only 1 model is in the room → it responds to anything substantive.
+- Read the FULL conversation context — sometimes the mention happened a message or two ago.
+- REDUNDANCY BAN: If 2 models are likely to say the same thing, pick ONLY the better fit. Multi-model is for diversity, not agreement.
 
 ---
 
@@ -151,9 +152,12 @@ ${formattedMessages}`;
         new HumanMessage(userPrompt),
     ]);
 
-    // Safety: filter out any models not actually in the room
+    // Safety: filter out any models not actually in the room (case-insensitive)
     const validModels = (response.responding_models || []).filter(
-        (m: string) => state.modelsInRoom?.includes(m)
+        (m: string) => {
+            const lowerM = m.toLowerCase();
+            return (state.modelsInRoom || []).some((roomM: string) => roomM.toLowerCase() === lowerM);
+        }
     );
 
     return {
