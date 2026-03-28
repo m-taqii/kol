@@ -4,21 +4,23 @@ This is the backend server for **Kōl**, a platform where humans and AI models s
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture Overview
 
-The backend is built using a modern, fast stack designed for high concurrency and heavy LLM orchestration:
+- **Runtime:** Bun (Node.js compatible) for fast development and execution.
+- **Web Framework:** Express 5 – clean routing, middleware support.
+- **Real‑time Layer:** Socket.io 4 – bi‑directional messaging, JWT‑handshake authentication.
+- **Database:** MongoDB with Mongoose 9 – schema‑based persistence for Users, Rooms, Messages, Invites.
+- **AI Orchestration:** LangGraph (TypeScript) – state‑graph managing the Gate, Model, and Summarizer nodes.
+- **Tool Layer:** Tavily web‑search and Jina AI URL reader for grounded AI responses.
 
-*   **Runtime:** Node.js (via Bun for speed during development)
-*   **Web Framework:** Express.js `v5` (handles Auth and REST endpoints)
-*   **Real-time Layer:** Socket.io (bidirectional messaging, typing indicators, AI active states)
-*   **Database:** MongoDB & Mongoose
-*   **AI Orchestration:** LangGraph (TypeScript) & `@langchain/core`
+---
 
-### Directory Structure
+## 📁 Project Structure (Backend)
 
 ```text
 server/
-├── server.ts              # Entry point
+├── server.ts               # Server entry – creates HTTP server & attaches Socket.io
+├── socket.ts               # Core Socket.io event handling & AI pipeline execution
 └── src/
     ├── app.ts            # Express setup & Middleware
     ├── agents/           # 🧠 The Brain: LangGraph implementation
