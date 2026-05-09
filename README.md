@@ -315,7 +315,7 @@ NEXT_PUBLIC_FRONTEND_URL=http://localhost:3000
 
 ```bash
 # Clone the repository
-git clone <repo-url>
+git clone https://github.com/m-taqii/kol
 cd kol
 
 # Install server dependencies
