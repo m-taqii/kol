@@ -39,7 +39,6 @@ AVAILABLE MODELS (only pick from models present in this room):
 
 - gpt — Deep reasoning, STEM, competition math, structured problem-solving
 - llama — Natural conversation, creative writing, multilingual, instruction following
-- kimi — Agentic reasoning, complex code, research, long-context analysis
 - qwen — Mathematical logic, critical thinking, nuanced dialogue, devil's advocate
 - longcat — Multi-step reasoning, practical problem-solving, real-world tool use
 - gemini — Broad world knowledge, long context, balanced reasoning, synthesis

@@ -15,10 +15,73 @@ interface RoomPageProps {
     params: Promise<{ id: string }>;
 }
 
+// --- Sub-components for performance ---
+
+const ChatInput = ({ 
+    onSend, 
+    onTyping, 
+    isConnected, 
+    isJoined 
+}: { 
+    onSend: (text: string) => void, 
+    onTyping: () => void,
+    isConnected: boolean, 
+    isJoined: boolean 
+}) => {
+    const [text, setText] = useState("");
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const handleSend = () => {
+        if (!text.trim() || !isJoined) return;
+        onSend(text);
+        setText("");
+        if (textareaRef.current) {
+            textareaRef.current.style.height = "44px";
+        }
+    };
+
+    return (
+        <div className="shrink-0 px-6 py-4 border-t border-[#2a2a2a] bg-[#111111]">
+            <div className="max-w-3xl mx-auto flex items-end gap-3">
+                <div className="flex-1 bg-[#1c1c1c] border border-[#2a2a2a] rounded-lg flex items-end focus-within:border-[#c4a882]/50 transition-colors">
+                    <textarea
+                        ref={textareaRef}
+                        value={text}
+                        onChange={(e) => {
+                            setText(e.target.value);
+                            onTyping();
+                            // Auto-grow
+                            const el = e.target;
+                            el.style.height = "44px";
+                            el.style.height = Math.min(el.scrollHeight, 160) + "px";
+                        }}
+                        placeholder={isConnected && isJoined ? "Message the room... (Shift+Enter for new line)" : "Connecting..."}
+                        disabled={!isConnected || !isJoined}
+                        className="flex-1 bg-transparent px-4 py-3 text-[14px] text-[#ededed] placeholder:text-[#5a5a5a] outline-none resize-none disabled:opacity-50 no-scrollbar"
+                        rows={1}
+                        style={{ minHeight: "44px", maxHeight: "160px", overflowY: "auto" }}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSend();
+                            }
+                        }}
+                    />
+                    <button
+                        onClick={handleSend}
+                        disabled={!isJoined || !text.trim()}
+                        className={`p-3 transition-colors ${text.trim() && isJoined ? "text-[#c4a882] hover:bg-[#c4a882]/10" : "text-[#3a3a3a]"} rounded-r-lg`}
+                    >
+                        <Send className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export default function RoomPage({ params }: RoomPageProps) {
     const { id } = use(params);
-    const [input, setInput] = useState("");
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [room, setRoom] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [showAiDropdown, setShowAiDropdown] = useState(false);
@@ -180,16 +243,6 @@ export default function RoomPage({ params }: RoomPageProps) {
     const uniqueAiModels = room.aiMembers || [];
     const isOwner = currentUser?._id === room.owner?._id || currentUser?._id === room.owner;
 
-    const handleSendMessage = () => {
-        if (!input.trim() || !isJoined) return;
-        sendMessage(input);
-        setInput("");
-        // Reset textarea height
-        if (textareaRef.current) {
-            textareaRef.current.style.height = "44px";
-        }
-    };
-
     return (
         <div className="flex flex-col h-full bg-[#0c0c0c]">
             {/* Room Header */}
@@ -205,10 +258,10 @@ export default function RoomPage({ params }: RoomPageProps) {
                         <h1 className="text-[#ededed] font-semibold text-[16px]">
                             {room.name}
                         </h1>
-                        <p className="text-[#5a5a5a] text-[12px] flex items-center gap-2">
+                        <div className="text-[#5a5a5a] text-[12px] flex items-center gap-2">
                              <div className={`w-1.5 h-1.5 rounded-full ${isConnected && isJoined ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-red-500 animate-pulse"}`} />
                             {room.members?.length || 0} members · {uniqueAiModels.length} AIs
-                        </p>
+                        </div>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -406,43 +459,13 @@ export default function RoomPage({ params }: RoomPageProps) {
                 <div ref={messagesEndRef} className="h-0" />
             </div>
 
-            {/* Input Form */}
-            <div className="shrink-0 px-6 py-4 border-t border-[#2a2a2a] bg-[#111111]">
-                <div className="max-w-3xl mx-auto flex items-end gap-3">
-                    <div className="flex-1 bg-[#1c1c1c] border border-[#2a2a2a] rounded-lg flex items-end focus-within:border-[#c4a882]/50 transition-colors">
-                        <textarea
-                            ref={textareaRef}
-                            value={input}
-                            onChange={(e) => {
-                                setInput(e.target.value);
-                                startTyping();
-                                // Auto-grow
-                                const el = e.target;
-                                el.style.height = "44px";
-                                el.style.height = Math.min(el.scrollHeight, 160) + "px";
-                            }}
-                            placeholder={isConnected && isJoined ? "Message the room... (Shift+Enter for new line)" : "Connecting..."}
-                            disabled={!isConnected || !isJoined}
-                            className="flex-1 bg-transparent px-4 py-3 text-[14px] text-[#ededed] placeholder:text-[#5a5a5a] outline-none resize-none disabled:opacity-50 no-scrollbar"
-                            rows={1}
-                            style={{ minHeight: "44px", maxHeight: "160px", overflowY: "auto" }}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter" && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSendMessage();
-                                }
-                            }}
-                        />
-                        <button
-                            onClick={handleSendMessage}
-                            disabled={!isJoined || !input.trim()}
-                            className={`p-3 transition-colors ${input.trim() && isJoined ? "text-[#c4a882] hover:bg-[#c4a882]/10" : "text-[#3a3a3a]"} rounded-r-lg`}
-                        >
-                            <Send className="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
-            </div>
+            {/* Input Area */}
+            <ChatInput 
+                onSend={sendMessage}
+                onTyping={startTyping}
+                isConnected={isConnected}
+                isJoined={isJoined}
+            />
         </div>
     );
 }

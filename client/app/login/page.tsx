@@ -22,8 +22,8 @@ const page = () => {
             password: formData.password,
         }, {
             withCredentials: true,
-        }).then((res) => {
-            console.log(res.data);
+        }).then((res: any) => {
+            document.cookie = `token=${res.data.token}; path=/; max-age=604800; SameSite=Lax`;
             setSuccess("Login successful");
             router.push("/me");
         }).catch((err) => {

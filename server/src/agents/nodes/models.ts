@@ -28,13 +28,6 @@ function getModelConfig(modelId: string): ModelConfig {
             temperature: 0.85,
             personality: `You are Llama — the conversationalist. You're warm, approachable, and great at explaining things in plain language. You bring creative angles and real-world analogies. In group discussions, you're the one who makes complex ideas accessible. You naturally build bridges between different viewpoints. You're not afraid to be casual — this is a group chat, not a thesis defense.`,
         },
-        kimi: {
-            llmModel: "moonshotai/kimi-k2-instruct-0905",
-            apiKey: process.env.GROQ_API_KEY || "",
-            baseURL: "https://api.groq.com/openai/v1",
-            temperature: 0.7,
-            personality: `You are Kimi — the engineer. You think in systems, architectures, and code. You're the one who spots implementation details others miss. In brainstorming sessions, you ground abstract ideas in technical reality. You're direct and concise — no fluff. When others are debating theory, you ask "but how would we actually build this?" You push for practical clarity.`,
-        },
         qwen: {
             llmModel: "qwen/qwen3-32b",
             apiKey: process.env.GROQ_API_KEY || "",
@@ -231,7 +224,7 @@ async function modelNode(state: any) {
             cleanedContent = cleanedContent.replace(/<function=[^>]+>[\s\S]*?<\/function>\n*/g, "").trim();
             cleanedContent = cleanedContent.replace(/<tool_call>[\s\S]*?<\/tool_call>\n*/g, "").trim();
             cleanedContent = cleanedContent.replace(/^\[?AI:\s*[^\]]+\]?:\s*/i, "");
-            cleanedContent = cleanedContent.replace(/^(gpt|llama|kimi|qwen|gemini|longcat):\s*/i, "");
+            cleanedContent = cleanedContent.replace(/^(gpt|llama|qwen|gemini|longcat):\s*/i, "");
             
             if (cleanedContent.includes('\n[AI:') || cleanedContent.includes('\nAI:')) {
                 const parts = cleanedContent.split(/\n\[?AI:/);

@@ -18,7 +18,7 @@
 
 ---
 
-**GPT** · **Llama** · **Gemini** · **Kimi** · **Qwen** · **LongCat**
+**GPT** · **Llama** · **Gemini** · **Qwen** · **LongCat**
 
 All in one room. All with perspectives. All synchronized.
 
@@ -98,7 +98,6 @@ Every model has a distinct identity, API configuration, and personality:
 |----------|-----|----------|-------------|
 | `gpt` | `openai/gpt-oss-120b` | Groq | The deep thinker — structured reasoning, STEM, logical clarity |
 | `llama` | `llama-3.3-70b-versatile` | Groq | The conversationalist — warm, plain language, creative angles |
-| `kimi` | `moonshotai/kimi-k2-instruct-0905` | Groq | The engineer — systems thinking, code, implementation details |
 | `qwen` | `qwen/qwen3-32b` | Groq | The critic — devil's advocate, stress‑tests ideas |
 | `gemini` | `gemini-2.5-flash` | Google AI | The generalist — broad knowledge, long‑context synthesis |
 | `longcat` | `LongCat-Flash-Chat` | LongCat | The actioner — multi-step plans, practical execution |
@@ -297,7 +296,7 @@ JWT_SECRET=your_super_secret_string_min_32_chars
 FRONTEND_URL=http://localhost:3000
 
 # LLM Providers
-GROQ_API_KEY=your_groq_api_key         # Gate + GPT + Llama + Kimi + Qwen
+GROQ_API_KEY=your_groq_api_key         # Gate + GPT + Llama + Qwen
 LONGCAT_API_KEY=your_longcat_api_key   # LongCat model
 GEMINI_API_KEY=your_gemini_api_key     # Gemini 2.5 Flash
 

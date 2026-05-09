@@ -289,7 +289,6 @@ export default function Home() {
                     {[
                         { name: "GPT", color: "linear-gradient(135deg, #10a37f 0%, #067d5f 100%)" },
                         { name: "Llama", color: "linear-gradient(135deg, #0668E1 0%, #764BA2 100%)" },
-                        { name: "Kimi", color: "linear-gradient(135deg, #00E5FF 0%, #0052D4 100%)" },
                         { name: "Qwen", color: "linear-gradient(135deg, #6c47ff 0%, #3e1eff 100%)" },
                         { name: "LongCat", color: "linear-gradient(135deg, #ff4b2b 0%, #ff416c 100%)" },
                         { name: "Gemini", color: "linear-gradient(135deg, #1A73E8 0%, #4285F4 100%)" },

@@ -20,6 +20,9 @@ const page = () => {
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         setLoading(true)
+        setError(""); // Clear previous errors
+        setSuccess(""); // Clear previous success messages
+
         axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/register`, {
             name: formData.name,
             email: formData.email,
@@ -27,13 +30,17 @@ const page = () => {
             password: formData.password,
         }, {
             withCredentials: true,
-        }).then((res) => {
-            console.log(res.data);
-            setSuccess("Registration successful");
-            router.push("/me");
+        }).then((res: any) => {
+            if (res.data && res.data.token) {
+                document.cookie = `token=${res.data.token}; path=/; max-age=604800; SameSite=Lax`;
+                setSuccess("Registration successful");
+                router.push("/me");
+            } else {
+                setError("Unexpected response from the server.");
+            }
         }).catch((err) => {
-            console.log(err);
-            setError(err.response.data.message);
+            console.error(err);
+            setError(err.response?.data?.message || "An error occurred. Please try again later.");
         }).finally(() => {
             setLoading(false);
         });
